@@ -1,3 +1,6 @@
 ./build
 *.db
 .env
+
+# Our compiled binary from go build
+osrs-clan-leaderboard
