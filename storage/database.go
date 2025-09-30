@@ -82,6 +82,37 @@ func EnrollServer(server types.ServersRow) error {
 	return nil
 }
 
+// FetchAllServers gets all enrolled servers from the database
+func FetchAllServers() ([]*types.ServersRow, error) {
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return []*types.ServersRow{}, err
+	}
+	defer db.Close()
+
+	sqlStmt := `SELECT id, server_name, channel_name, tracked_activities, schedule FROM servers`
+
+	var allServers []*types.ServersRow
+
+	rows, err := db.Query(sqlStmt)
+	if err != nil {
+		return []*types.ServersRow{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		s := &types.ServersRow{}
+		err = rows.Scan(&s.ID, &s.ServerName, &s.ChannelName, &s.Activities, &s.Schedule)
+		if err != nil {
+			return []*types.ServersRow{}, err
+		}
+
+		allServers = append(allServers, s)
+	}
+
+	return allServers, nil
+}
+
 // FetchServer takes a Guild ID and returns the relevant
 // row from our database with the users existing config
 func FetchServer(serverID string) (*types.ServersRow, error) {

@@ -6,6 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/michohl/osrs-clan-leaderboard/storage"
 )
 
 var (
@@ -21,6 +22,16 @@ func StartBotListener() {
 	discord, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	allServers, err := storage.FetchAllServers()
+	if err != nil {
+		panic(err)
+	}
+
+	// Re-enable any crons configured in our database
+	for _, server := range allServers {
+		EnableServerMessageCronjob(server, discord)
 	}
 
 	BootstrapEmojis(discord)

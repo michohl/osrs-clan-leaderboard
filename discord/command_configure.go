@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/hiscores"
+	"github.com/michohl/osrs-clan-leaderboard/schedule"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
@@ -124,25 +125,12 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	fmt.Printf("%+v\n", data)
 
 	channelName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
-	schedule := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+	cronSchedule := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	activities := data.Components[2].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 
-	channels, err := s.GuildChannels(i.GuildID)
+	channel, err := GetChannel(s, i.GuildID, channelName)
 	if err != nil {
 		panic(err)
-	}
-
-	var channel *discordgo.Channel = &discordgo.Channel{}
-	for _, c := range channels {
-		if c.Name == channelName {
-			channel = c
-			break
-		}
-
-	}
-
-	if channel.Name == "" {
-		panic(fmt.Errorf("Unable to find channel %s in this server", channelName))
 	}
 
 	// TODO: Switch back to this method once we get access to
@@ -176,17 +164,23 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		panic(err)
 	}
 
-	// Once we know what server the user selected we can store that choice
-	err = storage.EnrollServer(types.ServersRow{
+	server := types.ServersRow{
 		ID:          guildID,
 		ServerName:  guild.Name,
 		ChannelName: channel.Name,
 		Activities:  activities,
-		Schedule:    schedule,
-	})
+		Schedule:    cronSchedule,
+	}
+
+	// Once we know what server the user selected we can store that choice
+	err = storage.EnrollServer(server)
 	if err != nil {
 		panic(err)
 	}
+
+	// Update the cron job for this server in case the user changed the schedule
+	schedule.Cron.Remove(schedule.ScheduledJobs[server.ServerName].JobID)
+	EnableServerMessageCronjob(&server, s)
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
