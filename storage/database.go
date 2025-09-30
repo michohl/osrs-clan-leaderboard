@@ -3,17 +3,19 @@ package storage
 import (
 	"database/sql"
 	"log"
+	"os"
 
 	// https://github.com/mattn/go-sqlite3/issues/335
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
-	dbFilePath = "./test.db"
+	// DBFilePath is the user configured path to the SQLite DB file on disk
+	DBFilePath = os.Getenv("DB_FILE_PATH")
 )
 
 func init() {
-	db, err := sql.Open("sqlite3", dbFilePath)
+	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +47,7 @@ func init() {
 // commits that data to our database
 func EnrollServer(server ServersRow) error {
 	log.Printf("Request received to enroll server: %s (ID: %d)\n", server.ServerName, server.ID)
-	db, err := sql.Open("sqlite3", dbFilePath)
+	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		return err
 	}
@@ -83,7 +85,7 @@ func EnrollServer(server ServersRow) error {
 // row from our database with the users existing config
 func FetchServer(serverID string) (*ServersRow, error) {
 
-	db, err := sql.Open("sqlite3", dbFilePath)
+	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		return &ServersRow{}, err
 	}
