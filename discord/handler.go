@@ -2,6 +2,7 @@ package discord
 
 import (
 	"log"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -9,14 +10,16 @@ import (
 var commands = []*discordgo.ApplicationCommand{
 	&HelpCommandInfo,
 	&PingCommandInfo,
+	&ConfigureCommandInfo,
 }
 
 // CommandHandler is the contract any function we want to use as a handler must satisfy
 type CommandHandler func(s *discordgo.Session, i *discordgo.InteractionCreate)
 
 var commandHandlers = map[string]CommandHandler{
-	"help": HelpHandler,
-	"ping": PingHandler,
+	"help":      HelpHandler,
+	"ping":      PingHandler,
+	"configure": ConfigureHandler,
 }
 
 // GetCommandHandler takes the user specified command and returns
@@ -37,6 +40,8 @@ func GetCommandHandler(command string) CommandHandler {
 // each modal survey is suffixed with the user's ID to make it unique.
 func GetModalSubmitHandler(customID string) CommandHandler {
 	switch {
+	case strings.Contains(customID, "modals_survey_configure_"):
+		return ConfigureModalSubmit
 	default:
 		log.Fatalf("No Modal Submit Handler that matches %s", customID)
 	}
