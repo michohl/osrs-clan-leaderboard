@@ -1,4 +1,4 @@
-package storage
+package types
 
 // ServersRow is a struct mapping to the fields
 // present on every row in the `servers` table

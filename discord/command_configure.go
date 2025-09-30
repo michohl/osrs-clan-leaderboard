@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/hiscores"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
+	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
 // ConfigureCommandInfo is the information we'll use to
@@ -42,7 +43,7 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		panic(err)
 	}
 
-	var existingConfig = &storage.ServersRow{}
+	var existingConfig = &types.ServersRow{}
 	existingConfig, err = storage.FetchServer(i.GuildID)
 	if err != nil {
 		log.Printf("Unable to fetch an existing config for guild %s. Error: %s", i.GuildID, err)
@@ -176,7 +177,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	}
 
 	// Once we know what server the user selected we can store that choice
-	err = storage.EnrollServer(storage.ServersRow{
+	err = storage.EnrollServer(types.ServersRow{
 		ID:          guildID,
 		ServerName:  guild.Name,
 		ChannelName: channel.Name,

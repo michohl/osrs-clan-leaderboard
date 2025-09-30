@@ -5,40 +5,35 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-)
 
-// Hiscores is the struct we will unmarshall our response from the API into
-type Hiscores struct {
-	Name       string            `json:"name"`
-	Skills     []SkillHiscore    `json:"skills"`
-	Activities []ActivityHiscore `json:"activities"`
-}
+	"github.com/michohl/osrs-clan-leaderboard/types"
+)
 
 const API_URL = "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json"
 
 // GetPlayerHiscores makes a call to the Jagex provided
 // API endpoint that returns the hiscores for one specific user.
 // Documentation: https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores
-func GetPlayerHiscores(user OSRSUser) (Hiscores, error) {
+func GetPlayerHiscores(user types.OSRSUser) (types.Hiscores, error) {
 
-	var userHiscores Hiscores
+	var userHiscores types.Hiscores
 
 	resp, err := http.Get(
 		fmt.Sprintf("%s?player=%s", API_URL, user.EncodeUsername()),
 	)
 	if err != nil {
-		return Hiscores{}, err
+		return types.Hiscores{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Hiscores{}, err
+		return types.Hiscores{}, err
 	}
 
 	err = json.Unmarshal(body, &userHiscores)
 	if err != nil {
-		return Hiscores{}, err
+		return types.Hiscores{}, err
 	}
 
 	return userHiscores, nil
@@ -47,7 +42,7 @@ func GetPlayerHiscores(user OSRSUser) (Hiscores, error) {
 // GetAllSkills will return all the valid skill options that the API
 // can possibly return
 func GetAllSkills() ([]string, error) {
-	hs, err := GetPlayerHiscores(OSRSUser{Username: "sample"})
+	hs, err := GetPlayerHiscores(types.OSRSUser{Username: "sample"})
 	if err != nil {
 		return []string{}, err
 	}
@@ -63,7 +58,7 @@ func GetAllSkills() ([]string, error) {
 // GetAllActivities will return all the valid skill options that the API
 // can possibly return
 func GetAllActivities() ([]string, error) {
-	hs, err := GetPlayerHiscores(OSRSUser{Username: "sample"})
+	hs, err := GetPlayerHiscores(types.OSRSUser{Username: "sample"})
 	if err != nil {
 		return []string{}, err
 	}

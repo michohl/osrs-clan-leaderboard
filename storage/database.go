@@ -7,6 +7,7 @@ import (
 
 	// https://github.com/mattn/go-sqlite3/issues/335
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
 var (
@@ -45,7 +46,7 @@ func init() {
 
 // EnrollServer takes form data from our enrollment survey and
 // commits that data to our database
-func EnrollServer(server ServersRow) error {
+func EnrollServer(server types.ServersRow) error {
 	log.Printf("Request received to enroll server: %s (ID: %d)\n", server.ServerName, server.ID)
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
@@ -83,20 +84,20 @@ func EnrollServer(server ServersRow) error {
 
 // FetchServer takes a Guild ID and returns the relevant
 // row from our database with the users existing config
-func FetchServer(serverID string) (*ServersRow, error) {
+func FetchServer(serverID string) (*types.ServersRow, error) {
 
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
-		return &ServersRow{}, err
+		return &types.ServersRow{}, err
 	}
 	defer db.Close()
 
 	sqlStmt := `SELECT id, server_name, channel_name, tracked_activities, schedule FROM servers WHERE id = ?`
 	row := db.QueryRow(sqlStmt, serverID)
-	s := &ServersRow{}
+	s := &types.ServersRow{}
 	err = row.Scan(&s.ID, &s.ServerName, &s.ChannelName, &s.Activities, &s.Schedule)
 	if err != nil {
-		return &ServersRow{}, err
+		return &types.ServersRow{}, err
 	}
 
 	return s, nil

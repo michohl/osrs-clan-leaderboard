@@ -1,4 +1,4 @@
-package hiscores
+package types
 
 import "strings"
 

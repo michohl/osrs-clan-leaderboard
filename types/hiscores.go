@@ -1,4 +1,11 @@
-package hiscores
+package types
+
+// Hiscores is the struct we will unmarshall our response from the API into
+type Hiscores struct {
+	Name       string            `json:"name"`
+	Skills     []SkillHiscore    `json:"skills"`
+	Activities []ActivityHiscore `json:"activities"`
+}
 
 // SkillHiscore is a representation for a "skilling" activity
 type SkillHiscore struct {
