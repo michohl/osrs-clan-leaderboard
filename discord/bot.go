@@ -26,8 +26,19 @@ func StartBotListener() {
 	//discord.AddHandler(routeMessage)
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
+		switch i.Type {
+		case discordgo.InteractionApplicationCommand:
+			commandFunction := GetCommandHandler(i.ApplicationCommandData().Name)
+			if commandFunction != nil {
+				commandFunction(s, i)
+			}
+		case discordgo.InteractionModalSubmit:
+			modalSubmitFunction := GetModalSubmitHandler(i.ModalSubmitData().CustomID)
+			if modalSubmitFunction != nil {
+				modalSubmitFunction(s, i)
+			}
+		default:
+			log.Fatalf("No handler for Interaction Type %s", i.Type)
 		}
 	})
 
