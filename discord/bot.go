@@ -8,11 +8,17 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+var (
+	// BotToken is the token used for creating our bot
+	BotToken = os.Getenv("DISCORD_BOT_TOKEN")
+	// ApplicationID is the ID for the application found in the Discord developer portal
+	ApplicationID = os.Getenv("DISCORD_APP_ID")
+)
+
 // StartBotListener is the function that starts the Discord
 // bot and makes it available to accept commands from users
 func StartBotListener() {
-	botToken := os.Getenv("DISCORD_BOT_TOKEN")
-	discord, err := discordgo.New("Bot " + botToken)
+	discord, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
 		log.Fatal(err)
 	}
