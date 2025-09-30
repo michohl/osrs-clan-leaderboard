@@ -26,26 +26,40 @@ func HelpHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 // Actually do the command the user is requesting
 func helpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+	documentationEmoji := ApplicationEmojis["documents"]
+	githubEmoji := ApplicationEmojis["github"]
+
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: "TBD",
-			/*
-				// TODO: Figure out how to make a pretty help message
-				Components: []discordgo.MessageComponent{
-					discordgo.Container{
-						Spoiler: false,
-						Components: []discordgo.MessageComponent{
-							discordgo.TextDisplay{
-								Content: "# This is a test\nDetails here",
+			Flags:   discordgo.MessageFlagsEphemeral,
+			// Embeds:  []*discordgo.MessageEmbed{},
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Emoji: &discordgo.ComponentEmoji{
+								Name: documentationEmoji.Name,
+								ID:   documentationEmoji.ID,
 							},
-							discordgo.TextDisplay{
-								Content: "# This is a second test\nOther details here",
+							Label: "Documentation",
+							Style: discordgo.LinkButton,
+							URL:   "https://github.com/michohl/osrs-clan-leaderboard",
+						},
+						discordgo.Button{
+							Emoji: &discordgo.ComponentEmoji{
+								Name: githubEmoji.Name,
+								ID:   githubEmoji.ID,
 							},
+							Label: "Report an Issue",
+							Style: discordgo.LinkButton,
+							URL:   "https://github.com/michohl/osrs-clan-leaderboard/issues",
 						},
 					},
 				},
-			*/
+			},
 		},
 	})
 	if err != nil {

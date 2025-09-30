@@ -23,6 +23,8 @@ func StartBotListener() {
 		log.Fatal(err)
 	}
 
+	BootstrapEmojis(discord)
+
 	//discord.AddHandler(routeMessage)
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
