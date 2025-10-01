@@ -1,0 +1,65 @@
+package discord
+
+import (
+	"fmt"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/michohl/osrs-clan-leaderboard/storage"
+	"github.com/michohl/osrs-clan-leaderboard/types"
+)
+
+// AssignCommandInfo builds an association between OSRS
+// usernames and discord users
+var AssignCommandInfo = discordgo.ApplicationCommand{
+	Name:        "assign",
+	Description: "Assign an OSRS user to a discord member",
+	Type:        discordgo.ChatApplicationCommand,
+	Options: []*discordgo.ApplicationCommandOption{
+		{
+			Name:        "discord_user",
+			Description: "The user's Discord handle",
+			Type:        discordgo.ApplicationCommandOptionUser,
+			Required:    true,
+		},
+		{
+			Name:        "osrs_user",
+			Description: "The user's OSRS username",
+			Type:        discordgo.ApplicationCommandOptionString,
+			Required:    true,
+		},
+	},
+}
+
+// AssignHandler will take a command request from Discord and translate
+// that into an action. This is where we decide if we're taking action
+// or if Discord is just asking what autocomplete options are available
+func AssignHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		assignCommand(s, i)
+	}
+}
+
+// Actually do the command the user is requesting
+func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+	data := i.ApplicationCommandData().Options
+	discordUser := data[0].UserValue(s)
+	osrsUsername := data[1].StringValue()
+
+	err := storage.EnrollUser(i.GuildID, discordUser, types.OSRSUser{Username: osrsUsername})
+	if err != nil {
+		panic(err)
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("OSRS User %s assigned to <@%s>", osrsUsername, discordUser.ID),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+}

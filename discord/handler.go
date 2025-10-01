@@ -11,6 +11,7 @@ var commands = []*discordgo.ApplicationCommand{
 	&HelpCommandInfo,
 	&PingCommandInfo,
 	&ConfigureCommandInfo,
+	&AssignCommandInfo,
 }
 
 // CommandHandler is the contract any function we want to use as a handler must satisfy
@@ -20,6 +21,7 @@ var commandHandlers = map[string]CommandHandler{
 	"help":      HelpHandler,
 	"ping":      PingHandler,
 	"configure": ConfigureHandler,
+	"assign":    AssignHandler,
 }
 
 // GetCommandHandler takes the user specified command and returns

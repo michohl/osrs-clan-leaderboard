@@ -6,6 +6,7 @@ import (
 	"os"
 
 	// https://github.com/mattn/go-sqlite3/issues/335
+	"github.com/bwmarrin/discordgo"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
@@ -31,10 +32,11 @@ func init() {
 		schedule TEXT
     );
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        server_name TEXT,
+		osrs_username_key TEXT NOT NULL PRIMARY KEY,
+		osrs_username TEXT,
+        server_id TEXT,
 		discord_username TEXT,
-		osrs_username TEXT
+		discord_user_id TEXT
     );
     `
 	_, err = db.Exec(sqlStmt)
@@ -74,6 +76,41 @@ func EnrollServer(server types.ServersRow) error {
 		server.ChannelName,
 		server.Activities,
 		server.Schedule,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// EnrollUser takes form data from our enrollment survey and
+// commits that data to our database
+func EnrollUser(guildID string, discordUser *discordgo.User, osrsUser types.OSRSUser) error {
+	log.Printf("Request received to attach discord user %s to OSRS user %s\n", discordUser.Username, osrsUser.Username)
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	sqlStmt := `
+	INSERT OR REPLACE INTO users (osrs_username_key, osrs_username, server_id, discord_username, discord_user_id)
+	VALUES (
+		?,
+		?,
+		?,
+		?,
+		?
+	);
+	`
+	_, err = db.Exec(
+		sqlStmt,
+		osrsUser.EncodeUsername(), // Normalize input to disallow duplicates
+		osrsUser.Username,         // The way the user wants it to appear
+		guildID,
+		discordUser.Username,
+		discordUser.ID,
 	)
 	if err != nil {
 		return err

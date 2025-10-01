@@ -11,5 +11,5 @@ type OSRSUser struct {
 // of the OSRS Username and prepares it for use in
 // our API call
 func (u OSRSUser) EncodeUsername() string {
-	return strings.ReplaceAll(u.Username, " ", "_")
+	return strings.ToLower(strings.ReplaceAll(u.Username, " ", "_"))
 }
