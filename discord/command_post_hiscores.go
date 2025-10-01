@@ -27,18 +27,21 @@ func PostHiscoresHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 // Actually do the command the user is requesting
 func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-	err := PostHiscoresMessage(i.GuildID, s)
-	if err != nil {
-		panic(err)
-	}
-
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	// Posting the message takes longer than our timeout allows so we'll just
+	// tell the user we're taking action then continue processing in the background
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Messaged posted!",
+			Content: "Messaged being generated now...",
 		},
 	})
 	if err != nil {
 		panic(err)
 	}
+
+	err = PostHiscoresMessage(i.GuildID, s)
+	if err != nil {
+		panic(err)
+	}
+
 }
