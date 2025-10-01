@@ -44,16 +44,20 @@ func NormalizeEmojiName(name string) string {
 	name = strings.Trim(name, " ")
 
 	weirdCases := map[string]string{
-		"Bounty Hunter ":    "bounty_hunter",
-		"Clue Scrolls ":     "clue_scrolls",
+		"Bounty Hunter ":    "skulled",
+		"Clue Scrolls ":     "clue_scroll",
 		"Chambers of Xeric": "cox",
 		"Theatre of Blood":  "tob",
 		"Tombs of Amascut":  "toa",
+		"Nightmare":         "nightmare",
+		"PvP":               "skulled",
+		"LMS":               "skulled",
+		"Rifts closed":      "gotr",
 	}
 
 	// Some activities have "variations" that we want to all resolve to the same thing
 	for p, n := range weirdCases {
-		if strings.HasPrefix(name, p) {
+		if strings.Contains(name, p) {
 			return n
 		}
 	}
