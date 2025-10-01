@@ -5,21 +5,54 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/michohl/osrs-clan-leaderboard/hiscores"
 	"github.com/michohl/osrs-clan-leaderboard/schedule"
+	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
 // PostHiscoresMessage posts a message to the user configured
 // channel. This is done on a cron configured by the user
-func PostHiscoresMessage(server *types.ServersRow, s *discordgo.Session) error {
-	log.Printf("Posting scheduled hiscores message for %s\n", server.ServerName)
+func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
+
+	// Fetch the latest data from our db in case it has changed
+	server, err := storage.FetchServer(serverID)
+	if err != nil {
+		return err
+	}
 
 	channel, err := GetChannel(s, fmt.Sprintf("%d", server.ID), server.ChannelName)
 	if err != nil {
 		return err
 	}
 
-	s.ChannelMessageSend(channel.ID, "Hello from the cron!")
+	hiscoresFields, err := hiscores.GenerateHiscoresFields(server)
+	if err != nil {
+		return err
+	}
+
+	messageEmbedData := &discordgo.MessageEmbed{
+		Title: "Hiscores",
+		// Description: "Hello from the cron!",
+		Fields: hiscoresFields,
+	}
+
+	if server.MessageID != "" && server.ShouldEditMessage {
+		log.Printf("Editing existing scheduled hiscores message for %s\n", server.ServerName)
+		s.ChannelMessageEditEmbed(channel.ID, server.MessageID, messageEmbedData)
+	} else {
+		log.Printf("Posting new scheduled hiscores message for %s\n", server.ServerName)
+		message, err := s.ChannelMessageSendEmbed(channel.ID, messageEmbedData)
+		if err != nil {
+			return err
+		}
+
+		// Update our records to keep track of this message so we can edit it later
+		err = storage.UpdateServerMessageID(server, message.ID)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -32,7 +65,7 @@ func PostHiscoresMessage(server *types.ServersRow, s *discordgo.Session) error {
 func EnableServerMessageCronjob(server *types.ServersRow, s *discordgo.Session) error {
 
 	jobID, err := schedule.Cron.AddFunc(server.Schedule, func() {
-		PostHiscoresMessage(server, s)
+		PostHiscoresMessage(fmt.Sprintf("%d", server.ID), s)
 	})
 	if err != nil {
 		log.Fatalf("Unable to schedule cron job for server %s because %s", server.ServerName, err)

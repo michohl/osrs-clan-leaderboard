@@ -110,6 +110,19 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 						},
 					},
 				},
+				// TODO: Replace with a dropdown menu with yes/no options
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:    "edit",
+							Label:       "Edit message instead of posting new?",
+							Style:       discordgo.TextInputShort,
+							Placeholder: "true",
+							Required:    true,
+							Value:       fmt.Sprintf("%t", existingConfig.ShouldEditMessage),
+						},
+					},
+				},
 			},
 		},
 	})
@@ -127,6 +140,10 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	channelName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	cronSchedule := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	activities := data.Components[2].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+	shouldEditMessage, err := strconv.ParseBool(data.Components[3].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value)
+	if err != nil {
+		panic(err)
+	}
 
 	channel, err := GetChannel(s, i.GuildID, channelName)
 	if err != nil {
@@ -165,11 +182,12 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	}
 
 	server := types.ServersRow{
-		ID:          guildID,
-		ServerName:  guild.Name,
-		ChannelName: channel.Name,
-		Activities:  activities,
-		Schedule:    cronSchedule,
+		ID:                guildID,
+		ServerName:        guild.Name,
+		ChannelName:       channel.Name,
+		Activities:        activities,
+		Schedule:          cronSchedule,
+		ShouldEditMessage: shouldEditMessage,
 	}
 
 	// Once we know what server the user selected we can store that choice

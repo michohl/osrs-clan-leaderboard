@@ -2,6 +2,7 @@ package discord
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
 // HelpCommandInfo is the information we'll use to
@@ -27,8 +28,8 @@ func HelpHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 // Actually do the command the user is requesting
 func helpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-	documentationEmoji := ApplicationEmojis["documents"]
-	githubEmoji := ApplicationEmojis["github"]
+	documentationEmoji := types.ApplicationEmojis["documents"]
+	githubEmoji := types.ApplicationEmojis["github"]
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,

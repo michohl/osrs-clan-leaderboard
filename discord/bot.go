@@ -7,13 +7,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
+	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
 var (
 	// BotToken is the token used for creating our bot
 	BotToken = os.Getenv("DISCORD_BOT_TOKEN")
-	// ApplicationID is the ID for the application found in the Discord developer portal
-	ApplicationID = os.Getenv("DISCORD_APP_ID")
 )
 
 // StartBotListener is the function that starts the Discord
@@ -34,7 +33,7 @@ func StartBotListener() {
 		EnableServerMessageCronjob(server, discord)
 	}
 
-	BootstrapEmojis(discord)
+	types.BootstrapEmojis(discord)
 
 	//discord.AddHandler(routeMessage)
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
