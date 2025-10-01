@@ -9,7 +9,8 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
-const API_URL = "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json"
+// APIURL is the endpoint we reach out to to get Hiscores from Jagex
+const APIURL = "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json"
 
 // GetPlayerHiscores makes a call to the Jagex provided
 // API endpoint that returns the hiscores for one specific user.
@@ -19,7 +20,7 @@ func GetPlayerHiscores(user types.OSRSUser) (types.Hiscores, error) {
 	var userHiscores types.Hiscores
 
 	resp, err := http.Get(
-		fmt.Sprintf("%s?player=%s", API_URL, user.EncodeUsername()),
+		fmt.Sprintf("%s?player=%s", APIURL, user.EncodeUsername()),
 	)
 	if err != nil {
 		return types.Hiscores{}, err
