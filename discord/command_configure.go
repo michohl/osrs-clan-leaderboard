@@ -11,6 +11,7 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/schedule"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
+	"github.com/michohl/osrs-clan-leaderboard/utils"
 )
 
 // ConfigureCommandInfo is the information we'll use to
@@ -41,7 +42,8 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	allSkills, err := hiscores.GetAllSkills()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 	var existingConfig = &types.ServersRow{}
@@ -127,87 +129,122 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 }
 
 // ConfigureModalSubmit takes action when the users presses submit on the modal survey
 // used to configure the server's settings including scheduling, tracked users, and activities
 func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+	// Defer our message so we have time to do processing
+	// before discord times us out (we get 15 minutes now)
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Validating response data. Please wait...",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	data := i.ModalSubmitData()
-	fmt.Printf("%+v\n", data)
 
 	channelName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	cronSchedule := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	activities := data.Components[2].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	shouldEditMessage, err := strconv.ParseBool(data.Components[3].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value)
 	if err != nil {
-		panic(err)
-	}
-
-	channel, err := GetChannel(s, i.GuildID, channelName)
-	if err != nil {
-		panic(err)
+		// It's way less headache to just force a "good" input if the user
+		// puts something bogus. This will end up replaced with a menu select later
+		// anyways...
+		shouldEditMessage = false
 	}
 
 	// TODO: Switch back to this method once we get access to
 	// Labels with SelectMenus to get the Channel SelectMenu
 	/*
-		channel, err := s.State.Channel(channelID)
+				channel, err := s.State.Channel(channelID)
 
-		if err != nil {
-			if err == discordgo.ErrStateNotFound {
-				log.Printf("Channel %s not found in state cache, fetching from API...", channelID)
-				c, err := s.Channel(channelID)
 				if err != nil {
-					panic(err)
+					if err == discordgo.ErrStateNotFound {
+						log.Printf("Channel %s not found in state cache, fetching from API...", channelID)
+						c, err := s.Channel(channelID)
+						if err != nil {
+							log.Fatal(err)
+		        return
+						}
+						channel = c
+					} else {
+						log.Fatal(err)
+		        return
+					}
 				}
-				channel = c
-			} else {
-				panic(err)
-			}
-		}
 	*/
 
 	// We can't use the state cache because it is
 	// populated with all empty values
 	guild, err := s.Guild(i.GuildID)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 	guildID, err := strconv.Atoi(guild.ID)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 	server := types.ServersRow{
 		ID:                guildID,
 		ServerName:        guild.Name,
-		ChannelName:       channel.Name,
+		ChannelName:       channelName,
 		Activities:        activities,
 		Schedule:          cronSchedule,
 		ShouldEditMessage: shouldEditMessage,
 	}
 
+	err = utils.ValidateServerConfig(s, server)
+	if err != nil {
+		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Flags: discordgo.MessageFlagsEphemeral,
+
+			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channelName, err),
+		})
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		// Stop any changes from being commited to our DB
+		return
+	}
+
 	// Once we know what server the user selected we can store that choice
 	err = storage.EnrollServer(server)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 	// Update the cron job for this server in case the user changed the schedule
 	schedule.Cron.Remove(schedule.ScheduledJobs[server.ServerName].JobID)
 	EnableServerMessageCronjob(&server, s)
 
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Channel %s is now configured!", channel.Name),
-		},
+	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Flags: discordgo.MessageFlagsEphemeral,
+
+		Content: fmt.Sprintf("Channel %s is now successfully configured!", channelName),
 	})
+
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 	if !strings.HasPrefix(data.CustomID, "modals_survey") {

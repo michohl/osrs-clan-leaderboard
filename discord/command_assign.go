@@ -2,8 +2,10 @@ package discord
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/michohl/osrs-clan-leaderboard/hiscores"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
@@ -47,9 +49,27 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	discordUser := data[0].UserValue(s)
 	osrsUsername := data[1].StringValue()
 
-	err := storage.EnrollUser(i.GuildID, discordUser, types.OSRSUser{Username: osrsUsername})
+	_, err := hiscores.GetPlayerHiscores(types.OSRSUser{Username: osrsUsername})
 	if err != nil {
-		panic(err)
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("OSRS User %s couldn't be found...", osrsUsername),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		return
+	}
+
+	err = storage.EnrollUser(i.GuildID, discordUser, types.OSRSUser{Username: osrsUsername})
+	if err != nil {
+		log.Fatal(err)
+		return
 	}
 
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -60,6 +80,7 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 }
