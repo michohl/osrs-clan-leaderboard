@@ -28,24 +28,44 @@ func PostHiscoresHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 // Actually do the command the user is requesting
 func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
-
-	// Posting the message takes longer than our timeout allows so we'll just
-	// tell the user we're taking action then continue processing in the background
+	// Defer our message so we have time to do processing
+	// before discord times us out (we get 15 minutes now)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Messaged being generated now...",
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Generating hiscores message data...",
 		},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
 	err = PostHiscoresMessage(i.GuildID, s)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+
+		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Flags: discordgo.MessageFlagsEphemeral,
+
+			Content: "Failed to post hiscores message...",
+		})
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 		return
 	}
 
+	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Flags: discordgo.MessageFlagsEphemeral,
+
+		Content: "Hiscores message posted!",
+	})
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
