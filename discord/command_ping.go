@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"log"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -33,6 +35,7 @@ func pingCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 }

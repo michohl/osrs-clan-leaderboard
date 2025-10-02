@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"log"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -36,12 +38,14 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 	err = PostHiscoresMessage(i.GuildID, s)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 
 }

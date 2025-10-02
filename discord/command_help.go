@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"log"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
@@ -64,6 +66,7 @@ func helpCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return
 	}
 }
