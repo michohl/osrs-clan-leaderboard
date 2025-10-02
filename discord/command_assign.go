@@ -29,6 +29,42 @@ var AssignCommandInfo = discordgo.ApplicationCommand{
 			Type:        discordgo.ApplicationCommandOptionString,
 			Required:    true,
 		},
+		{
+			Name:        "osrs_account_type",
+			Description: "The 'kind' of Account (all kinds will use the global leaderboard)",
+			Type:        discordgo.ApplicationCommandOptionString,
+			Required:    true,
+			Choices: []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "Main",
+					Value: "main",
+				},
+				{
+					Name:  "Ironman",
+					Value: "ironman",
+				},
+				{
+					Name:  "Unranked Group Ironman",
+					Value: "unranked_group_ironman",
+				},
+				{
+					Name:  "Group Ironman",
+					Value: "group_ironman",
+				},
+				{
+					Name:  "Ultimate Ironman",
+					Value: "ultimate_ironman",
+				},
+				{
+					Name:  "Hardcore Ironman",
+					Value: "hardcore_ironman",
+				},
+				{
+					Name:  "Hardcore Group Ironman",
+					Value: "hardcore_group_ironman",
+				},
+			},
+		},
 	},
 }
 
@@ -48,8 +84,9 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData().Options
 	discordUser := data[0].UserValue(s)
 	osrsUsername := data[1].StringValue()
+	osrsAccountType := data[2].StringValue()
 
-	_, err := hiscores.GetPlayerHiscores(types.OSRSUser{Username: osrsUsername})
+	_, err := hiscores.GetPlayerHiscores(types.OSRSUser{Username: osrsUsername, AccountType: osrsAccountType})
 	if err != nil {
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -66,7 +103,14 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	err = storage.EnrollUser(i.GuildID, discordUser, types.OSRSUser{Username: osrsUsername})
+	err = storage.EnrollUser(
+		i.GuildID,
+		discordUser,
+		types.OSRSUser{
+			Username:    osrsUsername,
+			AccountType: osrsAccountType,
+		},
+	)
 	if err != nil {
 		log.Println(err)
 		return

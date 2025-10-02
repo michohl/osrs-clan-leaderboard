@@ -9,8 +9,13 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
-// APIURL is the endpoint we reach out to to get Hiscores from Jagex
-const APIURL = "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json"
+// HiscoreURLs are the endpoints we reach out to to get Hiscores from Jagex
+var HiscoreURLs map[string]string = map[string]string{
+	"ironman":          "https://secure.runescape.com/m=hiscore_oldschool_ironman/index_lite.json",
+	"hardcore_ironman": "https://secure.runescape.com/m=hiscore_oldschool_hardcore_ironman/index_lite.json",
+	"ultimate_ironman": "https://secure.runescape.com/m=hiscore_oldschool_ultimate/index_lite.json",
+	"main":             "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json",
+}
 
 // GetPlayerHiscores makes a call to the Jagex provided
 // API endpoint that returns the hiscores for one specific user.
@@ -19,8 +24,9 @@ func GetPlayerHiscores(user types.OSRSUser) (types.Hiscores, error) {
 
 	var userHiscores types.Hiscores
 
+	// We always want to use the main leaderboards for our local rankings
 	resp, err := http.Get(
-		fmt.Sprintf("%s?player=%s", APIURL, user.EncodeUsername()),
+		fmt.Sprintf("%s?player=%s", HiscoreURLs["main"], user.EncodeUsername()),
 	)
 	if err != nil {
 		return types.Hiscores{}, err

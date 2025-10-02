@@ -36,6 +36,7 @@ func init() {
     CREATE TABLE IF NOT EXISTS users (
 		osrs_username_key TEXT NOT NULL PRIMARY KEY,
 		osrs_username TEXT,
+		osrs_account_type TEXT DEFAULT "main",
         server_id TEXT,
 		discord_username TEXT,
 		discord_user_id TEXT
@@ -137,11 +138,13 @@ func EnrollUser(guildID string, discordUser *discordgo.User, osrsUser types.OSRS
 	INSERT OR REPLACE INTO users (
 		osrs_username_key,
 		osrs_username,
+		osrs_account_type,
 		server_id,
 		discord_username,
 		discord_user_id
 	)
 	VALUES (
+		?,
 		?,
 		?,
 		?,
@@ -153,6 +156,7 @@ func EnrollUser(guildID string, discordUser *discordgo.User, osrsUser types.OSRS
 		sqlStmt,
 		osrsUser.EncodeUsername(), // Normalize input to disallow duplicates
 		osrsUser.Username,         // The way the user wants it to appear
+		osrsUser.AccountType,
 		guildID,
 		discordUser.Username,
 		discordUser.ID,
@@ -255,6 +259,7 @@ func FetchAllUsers(serverID string) ([]*types.UsersRow, error) {
 		err = rows.Scan(
 			&u.OSRSUsernameKey,
 			&u.OSRSUsername,
+			&u.OSRSAccountType,
 			&u.ServerID,
 			&u.DiscordUsername,
 			&u.DiscordUserID,
@@ -289,6 +294,7 @@ func FetchUser(serverID string, osrsUsername string) (*types.UsersRow, error) {
 	err = row.Scan(
 		&u.OSRSUsernameKey,
 		&u.OSRSUsername,
+		&u.OSRSAccountType,
 		&u.DiscordUsername,
 		&u.DiscordUserID,
 	)

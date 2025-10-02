@@ -17,6 +17,7 @@ type ServersRow struct {
 type UsersRow struct {
 	OSRSUsernameKey string
 	OSRSUsername    string
+	OSRSAccountType string
 	ServerID        string
 	DiscordUsername string
 	DiscordUserID   int
