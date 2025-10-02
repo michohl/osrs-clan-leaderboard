@@ -211,10 +211,37 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 
 	err = utils.ValidateServerConfig(s, server)
 	if err != nil {
+		cronEmoji := types.ApplicationEmojis["crontab"]
+		toolsEmoji := types.ApplicationEmojis["tools"]
+
 		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Flags: discordgo.MessageFlagsEphemeral,
 
 			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channelName, err),
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Emoji: &discordgo.ComponentEmoji{
+								Name: toolsEmoji.Name,
+								ID:   toolsEmoji.ID,
+							},
+							Label: "List of All Skills and Activities",
+							Style: discordgo.LinkButton,
+							URL:   "https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores",
+						},
+						discordgo.Button{
+							Emoji: &discordgo.ComponentEmoji{
+								Name: cronEmoji.Name,
+								ID:   cronEmoji.ID,
+							},
+							Label: "Cron Guru",
+							Style: discordgo.LinkButton,
+							URL:   "https://crontab.guru/#0_19_*_*_SUN",
+						},
+					},
+				},
+			},
 		})
 		if err != nil {
 			log.Println(err)
