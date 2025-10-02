@@ -72,9 +72,10 @@ func GenerateHiscoresFields(server *types.ServersRow) ([]*discordgo.MessageEmbed
 		for _, rankedUser := range sortedUserHiscores.Rankings {
 
 			userField.Value = fmt.Sprintf(
-				"%s\n%d - %s <@%d>",
+				"%s\n%d - <:%s> %s <@%d>",
 				userField.Value,
 				rankedUser.LocalRank,
+				types.ApplicationEmojis[rankedUser.User.OSRSAccountType].APIName(),
 				rankedUser.User.OSRSUsername,
 				rankedUser.User.DiscordUserID,
 			)
