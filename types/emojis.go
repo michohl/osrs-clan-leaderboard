@@ -1,6 +1,7 @@
 package types
 
 import (
+	"log"
 	"os"
 	"strings"
 
@@ -19,8 +20,13 @@ var (
 
 // BootstrapEmojis is responsible for populating our static list
 // of all the application's available emojis
-func BootstrapEmojis(s *discordgo.Session) error {
-	emojis, err := s.ApplicationEmojis(ApplicationID)
+func BootstrapEmojis(botToken string) error {
+	discord, err := discordgo.New("Bot " + botToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	emojis, err := discord.ApplicationEmojis(ApplicationID)
 	if err != nil {
 		return err
 	}

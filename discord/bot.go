@@ -15,6 +15,10 @@ var (
 	BotToken = os.Getenv("DISCORD_BOT_TOKEN")
 )
 
+func init() {
+	types.BootstrapEmojis(BotToken)
+}
+
 // StartBotListener is the function that starts the Discord
 // bot and makes it available to accept commands from users
 func StartBotListener() {
@@ -32,8 +36,6 @@ func StartBotListener() {
 	for _, server := range allServers {
 		EnableServerMessageCronjob(server, discord)
 	}
-
-	types.BootstrapEmojis(discord)
 
 	//discord.AddHandler(routeMessage)
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
