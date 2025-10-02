@@ -46,3 +46,17 @@ type ActivityHiscore struct {
 	Rank  int    `json:"rank"`
 	Score int    `json:"score"`
 }
+
+type RankedUser struct {
+	User      UsersRow
+	LocalRank int
+	Rank      int
+	XP        int // Used for skills
+	Level     int // Used for skills
+	Score     int // Used for activities
+}
+
+type RankedHiscores struct {
+	Activity string
+	Rankings []RankedUser
+}

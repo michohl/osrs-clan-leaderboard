@@ -9,6 +9,7 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/schedule"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
+	"github.com/michohl/osrs-clan-leaderboard/utils"
 )
 
 // PostHiscoresMessage posts a message to the user configured
@@ -21,28 +22,22 @@ func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
-	channel, err := GetChannel(s, fmt.Sprintf("%d", server.ID), server.ChannelName)
+	channel, err := utils.GetChannel(s, fmt.Sprintf("%d", server.ID), server.ChannelName)
 	if err != nil {
 		return err
 	}
 
-	hiscoresFields, err := hiscores.GenerateHiscoresFields(server)
+	hiscoresEmbeds, err := hiscores.GenerateHiscoresFields(server)
 	if err != nil {
 		return err
-	}
-
-	messageEmbedData := &discordgo.MessageEmbed{
-		Title: "Hiscores",
-		// Description: "Hello from the cron!",
-		Fields: hiscoresFields,
 	}
 
 	if server.MessageID != "" && server.ShouldEditMessage {
 		log.Printf("Editing existing scheduled hiscores message for %s\n", server.ServerName)
-		s.ChannelMessageEditEmbed(channel.ID, server.MessageID, messageEmbedData)
+		s.ChannelMessageEditEmbeds(channel.ID, server.MessageID, hiscoresEmbeds)
 	} else {
 		log.Printf("Posting new scheduled hiscores message for %s\n", server.ServerName)
-		message, err := s.ChannelMessageSendEmbed(channel.ID, messageEmbedData)
+		message, err := s.ChannelMessageSendEmbeds(channel.ID, hiscoresEmbeds)
 		if err != nil {
 			return err
 		}
