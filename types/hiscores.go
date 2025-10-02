@@ -9,6 +9,8 @@ type Hiscores struct {
 	Activities []ActivityHiscore `json:"activities"`
 }
 
+// GetSkill takes filters our list of SkillHiscores and returns
+// only the hiscore that matches the name the user requested
 func (h *Hiscores) GetSkill(name string) *SkillHiscore {
 	for _, skill := range h.Skills {
 		if strings.EqualFold(skill.Name, strings.Trim(name, " ")) {
@@ -19,6 +21,8 @@ func (h *Hiscores) GetSkill(name string) *SkillHiscore {
 	return nil
 }
 
+// GetActivity takes filters our list of ActivityHiscores and returns
+// only the hiscore that matches the name the user requested
 func (h *Hiscores) GetActivity(name string) *ActivityHiscore {
 	for _, activity := range h.Activities {
 		if strings.EqualFold(activity.Name, strings.Trim(name, " ")) {
@@ -47,6 +51,7 @@ type ActivityHiscore struct {
 	Score int    `json:"score"`
 }
 
+// RankedUser has information we need to write each "row" of our hiscores message
 type RankedUser struct {
 	User      UsersRow
 	LocalRank int
@@ -56,6 +61,8 @@ type RankedUser struct {
 	Score     int // Used for activities
 }
 
+// RankedHiscores represents our "local hiscores" where we have one activity
+// and all of our users ranked in order
 type RankedHiscores struct {
 	Activity string
 	Rankings []RankedUser
