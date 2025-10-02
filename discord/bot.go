@@ -50,7 +50,7 @@ func StartBotListener() {
 				modalSubmitFunction(s, i)
 			}
 		default:
-			log.Fatalf("No handler for Interaction Type %s", i.Type)
+			log.Printf("No handler for Interaction Type %s\n", i.Type)
 		}
 	})
 

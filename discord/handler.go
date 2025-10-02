@@ -33,7 +33,7 @@ func GetCommandHandler(command string) CommandHandler {
 		return h
 	}
 
-	log.Fatalf("NO Command Handler defined for %s", command)
+	log.Printf("No Command Handler defined for %s\n", command)
 	return nil
 }
 
@@ -47,7 +47,7 @@ func GetModalSubmitHandler(customID string) CommandHandler {
 	case strings.Contains(customID, "modals_survey_configure_"):
 		return ConfigureModalSubmit
 	default:
-		log.Fatalf("No Modal Submit Handler that matches %s", customID)
+		log.Printf("No Modal Submit Handler that matches %s\n", customID)
 	}
 
 	return nil

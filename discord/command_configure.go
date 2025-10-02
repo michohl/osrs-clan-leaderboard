@@ -33,7 +33,7 @@ func ConfigureHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	case discordgo.InteractionApplicationCommand:
 		configureCommand(s, i)
 	default:
-		log.Fatalf("Could not handle %s", i.Type)
+		log.Printf("Could not handle %s\n", i.Type)
 	}
 }
 
@@ -42,7 +42,7 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	allSkills, err := hiscores.GetAllSkills()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
@@ -129,7 +129,7 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 }
@@ -148,7 +148,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
@@ -175,12 +175,12 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 						log.Printf("Channel %s not found in state cache, fetching from API...", channelID)
 						c, err := s.Channel(channelID)
 						if err != nil {
-							log.Fatal(err)
+							log.Println(err)
 		        return
 						}
 						channel = c
 					} else {
-						log.Fatal(err)
+						log.Println(err)
 		        return
 					}
 				}
@@ -190,13 +190,13 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	// populated with all empty values
 	guild, err := s.Guild(i.GuildID)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
 	guildID, err := strconv.Atoi(guild.ID)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
@@ -217,7 +217,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channelName, err),
 		})
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return
 		}
 
@@ -228,7 +228,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	// Once we know what server the user selected we can store that choice
 	err = storage.EnrollServer(server)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
@@ -243,7 +243,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 

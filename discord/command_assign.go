@@ -59,7 +59,7 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			},
 		})
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return
 		}
 
@@ -68,7 +68,7 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	err = storage.EnrollUser(i.GuildID, discordUser, types.OSRSUser{Username: osrsUsername})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 
@@ -80,7 +80,7 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 }

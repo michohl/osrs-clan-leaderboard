@@ -35,7 +35,7 @@ func pingCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return
 	}
 }

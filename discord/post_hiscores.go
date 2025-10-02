@@ -63,7 +63,7 @@ func EnableServerMessageCronjob(server *types.ServersRow, s *discordgo.Session) 
 		PostHiscoresMessage(fmt.Sprintf("%d", server.ID), s)
 	})
 	if err != nil {
-		log.Fatalf("Unable to schedule cron job for server %s because %s", server.ServerName, err)
+		log.Printf("Unable to schedule cron job for server %s because %s\n", server.ServerName, err)
 	}
 
 	log.Printf("Cron successfully scheduled for server %s. Job ID %d\n", server.ServerName, jobID)
