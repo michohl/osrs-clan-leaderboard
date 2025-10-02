@@ -31,7 +31,7 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Defer our message so we have time to do processing
 	// before discord times us out (we get 15 minutes now)
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
 			Content: "Generating hiscores message data...",
@@ -47,8 +47,7 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Println(err)
 
 		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Flags: discordgo.MessageFlagsEphemeral,
-
+			Flags:   discordgo.MessageFlagsEphemeral,
 			Content: "Failed to post hiscores message...",
 		})
 		if err != nil {
@@ -60,8 +59,7 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-		Flags: discordgo.MessageFlagsEphemeral,
-
+		Flags:   discordgo.MessageFlagsEphemeral,
 		Content: "Hiscores message posted!",
 	})
 	if err != nil {
