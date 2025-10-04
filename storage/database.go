@@ -69,6 +69,7 @@ func EnrollServer(server types.ServersRow) error {
 		channel_name,
 		tracked_activities,
 		schedule,
+		message_id,
 		should_edit_message
 	)
 	VALUES (
@@ -77,6 +78,7 @@ func EnrollServer(server types.ServersRow) error {
 		?,
 		?,
 		?,
+		(SELECT message_id from servers where id = ?),
 		?
 	);
 	`
@@ -87,6 +89,7 @@ func EnrollServer(server types.ServersRow) error {
 		server.ChannelName,
 		server.Activities,
 		server.Schedule,
+		server.ID,
 		server.ShouldEditMessage,
 	)
 	if err != nil {
