@@ -57,7 +57,6 @@ func NormalizeEmojiName(name string) string {
 		"Tombs of Amascut":  "toa_chest",
 		"Nightmare":         "nightmare",
 		"PvP":               "skulled",
-		"LMS":               "skulled",
 		"Rifts closed":      "gotr",
 	}
 
