@@ -52,9 +52,9 @@ func NormalizeEmojiName(name string) string {
 	weirdCases := map[string]string{
 		"Bounty Hunter ":    "skulled",
 		"Clue Scrolls ":     "clue_scroll",
-		"Chambers of Xeric": "cox",
-		"Theatre of Blood":  "tob",
-		"Tombs of Amascut":  "toa",
+		"Chambers of Xeric": "cox_chest",
+		"Theatre of Blood":  "tob_chest",
+		"Tombs of Amascut":  "toa_chest",
 		"Nightmare":         "nightmare",
 		"PvP":               "skulled",
 		"LMS":               "skulled",
