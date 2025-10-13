@@ -6,8 +6,9 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/hiscores"
-	"github.com/michohl/osrs-clan-leaderboard/types"
 	"github.com/robfig/cron/v3"
+
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
 // ValidateServerConfig takes a ServersRow struct parsed
@@ -16,14 +17,15 @@ import (
 //
 // If any errors are discovered they'll be returned as an
 // "pretty" error that we can send back to the user.
-func ValidateServerConfig(s *discordgo.Session, server types.ServersRow) error {
+func ValidateServerConfig(s *discordgo.Session, server model.Servers) error {
 
 	discoveredErrors := ""
 
 	// TODO: Remove this check once we can use a select menu to only provide
 	// the user with valid channels as options
-	_, err := GetChannel(s, fmt.Sprintf("%d", server.ID), server.ChannelName)
+	_, err := GetChannel(s, server.ID, server.ChannelName)
 	if err != nil {
+		fmt.Println(err)
 		discoveredErrors = fmt.Sprintf(
 			"%s\n* Channel not found in server: %s",
 			discoveredErrors,
@@ -39,7 +41,7 @@ func ValidateServerConfig(s *discordgo.Session, server types.ServersRow) error {
 		)
 	}
 
-	totalActivities := len(strings.Split(server.Activities, ","))
+	totalActivities := len(strings.Split(server.TrackedActivities, ","))
 	if totalActivities > 10 {
 		discoveredErrors = fmt.Sprintf(
 			"%s\n* More than 10 Activities specified: %d",
@@ -48,7 +50,7 @@ func ValidateServerConfig(s *discordgo.Session, server types.ServersRow) error {
 		)
 	}
 
-	for activity := range strings.SplitSeq(server.Activities, ",") {
+	for activity := range strings.SplitSeq(server.TrackedActivities, ",") {
 		_, err := hiscores.IsActivityOrSkill(activity)
 		if err != nil {
 			discoveredErrors = fmt.Sprintf(

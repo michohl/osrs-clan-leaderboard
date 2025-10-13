@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
@@ -17,16 +18,25 @@ var HiscoreURLs map[string]string = map[string]string{
 	"main":             "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json",
 }
 
+// EncodeRSN takes the "human friendly" version
+// of the OSRS Username and prepares it for use in
+// our API call
+func EncodeRSN(username string) string {
+	return strings.ToLower(strings.ReplaceAll(username, " ", "_"))
+}
+
 // GetPlayerHiscores makes a call to the Jagex provided
 // API endpoint that returns the hiscores for one specific user.
 // Documentation: https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores
-func GetPlayerHiscores(user types.OSRSUser) (types.Hiscores, error) {
+func GetPlayerHiscores(username string) (types.Hiscores, error) {
+
+	encodedUsername := EncodeRSN(username)
 
 	var userHiscores types.Hiscores
 
 	// We always want to use the main leaderboards for our local rankings
 	resp, err := http.Get(
-		fmt.Sprintf("%s?player=%s", HiscoreURLs["main"], user.EncodeUsername()),
+		fmt.Sprintf("%s?player=%s", HiscoreURLs["main"], encodedUsername),
 	)
 	if err != nil {
 		return types.Hiscores{}, err
@@ -49,7 +59,7 @@ func GetPlayerHiscores(user types.OSRSUser) (types.Hiscores, error) {
 // GetAllSkills will return all the valid skill options that the API
 // can possibly return
 func GetAllSkills() ([]string, error) {
-	hs, err := GetPlayerHiscores(types.OSRSUser{Username: "sample"})
+	hs, err := GetPlayerHiscores("sample")
 	if err != nil {
 		return []string{}, err
 	}
@@ -65,7 +75,7 @@ func GetAllSkills() ([]string, error) {
 // GetAllActivities will return all the valid skill options that the API
 // can possibly return
 func GetAllActivities() ([]string, error) {
-	hs, err := GetPlayerHiscores(types.OSRSUser{Username: "sample"})
+	hs, err := GetPlayerHiscores("sample")
 	if err != nil {
 		return []string{}, err
 	}

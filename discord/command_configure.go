@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/hiscores"
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 	"github.com/michohl/osrs-clan-leaderboard/schedule"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
@@ -46,7 +47,7 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	var existingConfig = &types.ServersRow{}
+	var existingConfig model.Servers
 	existingConfig, err = storage.FetchServer(i.GuildID)
 	if err != nil {
 		log.Printf("Unable to fetch an existing config for guild %s. Error: %s", i.GuildID, err)
@@ -107,7 +108,7 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 							Style:       discordgo.TextInputParagraph,
 							Placeholder: fmt.Sprint(strings.Join(allSkills[0:6], ",")),
 							Required:    true,
-							Value:       existingConfig.Activities,
+							Value:       existingConfig.TrackedActivities,
 							MaxLength:   2000,
 						},
 					},
@@ -194,17 +195,11 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	guildID, err := strconv.Atoi(guild.ID)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	server := types.ServersRow{
-		ID:                guildID,
+	server := model.Servers{
+		ID:                guild.ID,
 		ServerName:        guild.Name,
 		ChannelName:       channelName,
-		Activities:        activities,
+		TrackedActivities: activities,
 		Schedule:          cronSchedule,
 		ShouldEditMessage: shouldEditMessage,
 	}
@@ -261,7 +256,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 
 	// Update the cron job for this server in case the user changed the schedule
 	schedule.Cron.Remove(schedule.ScheduledJobs[server.ServerName].JobID)
-	EnableServerMessageCronjob(&server, s)
+	EnableServerMessageCronjob(server, s)
 
 	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 		Flags: discordgo.MessageFlagsEphemeral,

@@ -7,7 +7,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/hiscores"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
-	"github.com/michohl/osrs-clan-leaderboard/types"
+
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
 // AssignCommandInfo builds an association between OSRS
@@ -86,7 +87,7 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	osrsUsername := data[1].StringValue()
 	osrsAccountType := data[2].StringValue()
 
-	_, err := hiscores.GetPlayerHiscores(types.OSRSUser{Username: osrsUsername, AccountType: osrsAccountType})
+	_, err := hiscores.GetPlayerHiscores(osrsUsername)
 	if err != nil {
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -103,14 +104,14 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	err = storage.EnrollUser(
-		i.GuildID,
-		discordUser,
-		types.OSRSUser{
-			Username:    osrsUsername,
-			AccountType: osrsAccountType,
-		},
-	)
+	err = storage.EnrollUser(model.Users{
+		OsrsUsernameKey: hiscores.EncodeRSN(osrsUsername),
+		OsrsUsername:    osrsUsername,
+		OsrsAccountType: osrsAccountType,
+		ServerID:        i.GuildID,
+		DiscordUsername: discordUser.Username,
+		DiscordUserID:   discordUser.ID,
+	})
 	if err != nil {
 		log.Println(err)
 		return
