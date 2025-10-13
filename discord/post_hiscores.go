@@ -1,7 +1,6 @@
 package discord
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
@@ -10,6 +9,8 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 	"github.com/michohl/osrs-clan-leaderboard/utils"
+
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
 // PostHiscoresMessage posts a message to the user configured
@@ -22,7 +23,7 @@ func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
-	channel, err := utils.GetChannel(s, fmt.Sprintf("%d", server.ID), server.ChannelName)
+	channel, err := utils.GetChannel(s, server.ID, server.ChannelName)
 	if err != nil {
 		return err
 	}
@@ -57,10 +58,10 @@ func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
 // update messages on the configured schedule
 //
 // We moved this outside the schedule package to avoid some circular imports
-func EnableServerMessageCronjob(server *types.ServersRow, s *discordgo.Session) error {
+func EnableServerMessageCronjob(server model.Servers, s *discordgo.Session) error {
 
 	jobID, err := schedule.Cron.AddFunc(server.Schedule, func() {
-		PostHiscoresMessage(fmt.Sprintf("%d", server.ID), s)
+		PostHiscoresMessage(server.ID, s)
 	})
 	if err != nil {
 		log.Printf("Unable to schedule cron job for server %s because %s\n", server.ServerName, err)

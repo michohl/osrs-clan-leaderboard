@@ -1,6 +1,10 @@
 package types
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
+)
 
 // Hiscores is the struct we will unmarshall our response from the API into
 type Hiscores struct {
@@ -53,7 +57,7 @@ type ActivityHiscore struct {
 
 // RankedUser has information we need to write each "row" of our hiscores message
 type RankedUser struct {
-	User      UsersRow
+	User      model.Users
 	LocalRank int
 	Rank      int
 	XP        int // Used for skills

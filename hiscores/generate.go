@@ -9,16 +9,18 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
+
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
 // GenerateHiscoresFields takes a specific server and finds all the
-// activities that server is tracking and generates hiscores with the
+// activities that server is tracking andjet_schemaserates hiscores with the
 // users enrolled in that specific server
-func GenerateHiscoresFields(server *types.ServersRow) ([]*discordgo.MessageEmbed, error) {
+func GenerateHiscoresFields(server model.Servers) ([]*discordgo.MessageEmbed, error) {
 	log.Printf("Generating Hiscores for server %s", server.ServerName)
 
-	allActivities := strings.Split(server.Activities, ",")
-	allUsers, err := storage.FetchAllUsers(fmt.Sprintf("%d", server.ID))
+	allActivities := strings.Split(server.TrackedActivities, ",")
+	allUsers, err := storage.FetchAllUsers(server.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +34,7 @@ func GenerateHiscoresFields(server *types.ServersRow) ([]*discordgo.MessageEmbed
 
 	for _, activity := range allActivities {
 		activity = strings.Trim(activity, " ")
-		log.Printf("Generating fields for Acitivity/Skill %s\n", activity)
+		log.Printf("Generating fields for Activity/Skill %s\n", activity)
 
 		activityKind, err := IsActivityOrSkill(activity)
 		if err != nil {
@@ -72,11 +74,11 @@ func GenerateHiscoresFields(server *types.ServersRow) ([]*discordgo.MessageEmbed
 		for _, rankedUser := range sortedUserHiscores.Rankings {
 
 			userField.Value = fmt.Sprintf(
-				"%s\n%d - <:%s> %s <@%d>",
+				"%s\n%d - <:%s> %s <@%s>",
 				userField.Value,
 				rankedUser.LocalRank,
-				types.ApplicationEmojis[rankedUser.User.OSRSAccountType].APIName(),
-				rankedUser.User.OSRSUsername,
+				types.ApplicationEmojis[rankedUser.User.OsrsAccountType].APIName(),
+				rankedUser.User.OsrsUsername,
 				rankedUser.User.DiscordUserID,
 			)
 
@@ -128,18 +130,18 @@ func GenerateHiscoresFields(server *types.ServersRow) ([]*discordgo.MessageEmbed
 
 // GetUserHiscores takes a list of users and returns a map populated with all of the
 // hiscores for each user
-func GetUserHiscores(allUsers []*types.UsersRow) (map[types.UsersRow]types.Hiscores, error) {
-	var userHiscores map[types.UsersRow]types.Hiscores = make(map[types.UsersRow]types.Hiscores)
+func GetUserHiscores(allUsers []model.Users) (map[model.Users]types.Hiscores, error) {
+	var userHiscores map[model.Users]types.Hiscores = make(map[model.Users]types.Hiscores)
 
 	// Loading Hiscores for all users in the server
 	for _, user := range allUsers {
-		log.Printf("Getting rank for user %s\n", user.OSRSUsername)
-		userHS, err := GetPlayerHiscores(types.OSRSUser{Username: user.OSRSUsername})
+		log.Printf("Getting rank for user %s\n", user.OsrsUsername)
+		userHS, err := GetPlayerHiscores(user.OsrsUsernameKey)
 		if err != nil {
 			return nil, err
 		}
 
-		userHiscores[*user] = userHS
+		userHiscores[user] = userHS
 	}
 
 	return userHiscores, nil
@@ -185,7 +187,7 @@ func IsActivityOrSkill(name string) (string, error) {
 
 // SortHiscores takes an array of hiscores for multiple
 // users and sorts them by rank for a specific activity
-func SortHiscores(hiscores map[types.UsersRow]types.Hiscores, activity string) (*types.RankedHiscores, error) {
+func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string) (*types.RankedHiscores, error) {
 
 	sortedHiscores := types.RankedHiscores{
 		Activity: activity,

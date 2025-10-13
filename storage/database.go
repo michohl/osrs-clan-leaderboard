@@ -6,9 +6,11 @@ import (
 	"os"
 
 	// https://github.com/mattn/go-sqlite3/issues/335
-	"github.com/bwmarrin/discordgo"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/michohl/osrs-clan-leaderboard/types"
+
+	"github.com/go-jet/jet/v2/sqlite"
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
+	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/table"
 )
 
 var (
@@ -25,21 +27,22 @@ func init() {
 
 	sqlStmt := `
     CREATE TABLE IF NOT EXISTS servers (
-        id INTEGER NOT NULL PRIMARY KEY,
-        server_name TEXT,
-		channel_name TEXT,
-		tracked_activities TEXT,
-		schedule TEXT,
-		message_id TEXT DEFAULT "",
-		should_edit_message BOOLEAN
+        id                  TEXT    NOT NULL PRIMARY KEY,
+        server_name         TEXT    NOT NULL DEFAULT "",
+		channel_name        TEXT    NOT NULL DEFAULT "",
+		tracked_activities  TEXT    NOT NULL DEFAULT "",
+		schedule            TEXT    NOT NULL DEFAULT "",
+		message_id          TEXT    NOT NULL DEFAULT "",
+		should_edit_message BOOLEAN NOT NULL DEFAULT true
     );
     CREATE TABLE IF NOT EXISTS users (
-		osrs_username_key TEXT NOT NULL PRIMARY KEY,
-		osrs_username TEXT,
-		osrs_account_type TEXT DEFAULT "main",
-        server_id TEXT,
-		discord_username TEXT,
-		discord_user_id TEXT
+		osrs_username_key TEXT NOT NULL DEFAULT "",
+        server_id         TEXT NOT NULL DEFAULT "",
+		osrs_username     TEXT NOT NULL DEFAULT "",
+		osrs_account_type TEXT NOT NULL DEFAULT "",
+		discord_username  TEXT NOT NULL DEFAULT "",
+		discord_user_id   TEXT NOT NULL DEFAULT "",
+		PRIMARY KEY (osrs_username_key, server_id)
     );
     `
 	_, err = db.Exec(sqlStmt)
@@ -51,8 +54,9 @@ func init() {
 
 // EnrollServer takes form data from our enrollment survey and
 // commits that data to our database
-func EnrollServer(server types.ServersRow) error {
-	log.Printf("Request received to enroll server: %s (ID: %d)\n", server.ServerName, server.ID)
+func EnrollServer(server model.Servers) error {
+	log.Printf("Request received to enroll server: %s (ID: %s)\n", server.ServerName, server.ID)
+
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		return err
@@ -62,36 +66,11 @@ func EnrollServer(server types.ServersRow) error {
 	// This design makes it so each server (guild) can only have one
 	// channel configured. If we want to allow multiple channels per server
 	// then the server ID needs to be a separate column from id
-	sqlStmt := `
-	INSERT OR REPLACE INTO servers (
-		id,
-		server_name,
-		channel_name,
-		tracked_activities,
-		schedule,
-		message_id,
-		should_edit_message
-	)
-	VALUES (
-		?,
-		?,
-		?,
-		?,
-		?,
-		(SELECT message_id from servers where id = ?),
-		?
-	);
-	`
-	_, err = db.Exec(
-		sqlStmt,
-		server.ID,
-		server.ServerName,
-		server.ChannelName,
-		server.Activities,
-		server.Schedule,
-		server.ID,
-		server.ShouldEditMessage,
-	)
+	sqlStmt := table.Servers.
+		INSERT(table.Servers.AllColumns).
+		MODEL(server)
+
+	_, err = sqlStmt.Exec(db)
 	if err != nil {
 		return err
 	}
@@ -101,8 +80,9 @@ func EnrollServer(server types.ServersRow) error {
 
 // UpdateServerMessageID takes a MessageID for a message we posted
 // and stores it so we can update that message later
-func UpdateServerMessageID(server *types.ServersRow, messageID string) error {
-	log.Printf("Request received to update message ID %s for server: %s (ID: %d)\n", messageID, server.ServerName, server.ID)
+func UpdateServerMessageID(server model.Servers, messageID string) error {
+	log.Printf("Request received to update message ID %s for server: %s (ID: %s)\n", messageID, server.ServerName, server.ID)
+
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		return err
@@ -112,14 +92,12 @@ func UpdateServerMessageID(server *types.ServersRow, messageID string) error {
 	// This design makes it so each server (guild) can only have one
 	// channel configured. If we want to allow multiple channels per server
 	// then the server ID needs to be a separate column from id
-	sqlStmt := `
-	UPDATE servers set message_id = ? WHERE id = ?;
-	`
-	_, err = db.Exec(
-		sqlStmt,
-		messageID,
-		server.ID,
-	)
+	sqlStmt := table.Servers.
+		UPDATE(table.Servers.MessageID).
+		SET(table.Servers.MessageID.SET(sqlite.String(messageID))).
+		WHERE(table.Servers.ID.EQ(sqlite.String(server.ID)))
+
+	_, err = sqlStmt.Exec(db)
 	if err != nil {
 		return err
 	}
@@ -129,41 +107,29 @@ func UpdateServerMessageID(server *types.ServersRow, messageID string) error {
 
 // EnrollUser takes form data from our enrollment survey and
 // commits that data to our database
-func EnrollUser(guildID string, discordUser *discordgo.User, osrsUser types.OSRSUser) error {
-	log.Printf("Request received to attach discord user %s to OSRS user %s\n", discordUser.Username, osrsUser.Username)
+func EnrollUser(user model.Users) error {
+	log.Printf("Request received to attach discord user %s to OSRS user %s\n", user.DiscordUsername, user.OsrsUsername)
+
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	sqlStmt := `
-	INSERT OR REPLACE INTO users (
-		osrs_username_key,
-		osrs_username,
-		osrs_account_type,
-		server_id,
-		discord_username,
-		discord_user_id
-	)
-	VALUES (
-		?,
-		?,
-		?,
-		?,
-		?,
-		?
-	);
-	`
-	_, err = db.Exec(
-		sqlStmt,
-		osrsUser.EncodeUsername(), // Normalize input to disallow duplicates
-		osrsUser.Username,         // The way the user wants it to appear
-		osrsUser.AccountType,
-		guildID,
-		discordUser.Username,
-		discordUser.ID,
-	)
+	sqlStmt := table.Users.
+		INSERT(table.Users.AllColumns).
+		MODEL(user).
+		ON_CONFLICT(table.Users.OsrsUsernameKey, table.Users.ServerID).
+		DO_UPDATE(
+			sqlite.SET(
+				table.Users.OsrsUsername.SET(sqlite.String(user.OsrsUsername)),
+				table.Users.OsrsAccountType.SET(sqlite.String(user.OsrsAccountType)),
+				table.Users.DiscordUsername.SET(sqlite.String(user.DiscordUsername)),
+				table.Users.DiscordUserID.SET(sqlite.String(user.DiscordUserID)),
+			),
+		)
+
+	_, err = sqlStmt.Exec(db)
 	if err != nil {
 		return err
 	}
@@ -172,39 +138,19 @@ func EnrollUser(guildID string, discordUser *discordgo.User, osrsUser types.OSRS
 }
 
 // FetchAllServers gets all enrolled servers from the database
-func FetchAllServers() ([]*types.ServersRow, error) {
+func FetchAllServers() ([]model.Servers, error) {
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
-		return []*types.ServersRow{}, err
+		return []model.Servers{}, err
 	}
 	defer db.Close()
 
-	sqlStmt := `SELECT * FROM servers`
+	sqlStmt := table.Servers.SELECT(table.Servers.AllColumns)
 
-	var allServers []*types.ServersRow
-
-	rows, err := db.Query(sqlStmt)
+	var allServers []model.Servers
+	err = sqlStmt.Query(db, &allServers)
 	if err != nil {
-		return []*types.ServersRow{}, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		s := &types.ServersRow{}
-		err = rows.Scan(
-			&s.ID,
-			&s.ServerName,
-			&s.ChannelName,
-			&s.Activities,
-			&s.Schedule,
-			&s.MessageID,
-			&s.ShouldEditMessage,
-		)
-		if err != nil {
-			return []*types.ServersRow{}, err
-		}
-
-		allServers = append(allServers, s)
+		return allServers, err
 	}
 
 	return allServers, nil
@@ -212,97 +158,66 @@ func FetchAllServers() ([]*types.ServersRow, error) {
 
 // FetchServer takes a Guild ID and returns the relevant
 // row from our database with the users existing config
-func FetchServer(serverID string) (*types.ServersRow, error) {
+func FetchServer(serverID string) (model.Servers, error) {
 
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
-		return &types.ServersRow{}, err
+		return model.Servers{}, err
 	}
 	defer db.Close()
 
-	sqlStmt := `SELECT * FROM servers WHERE id = ?`
-	row := db.QueryRow(sqlStmt, serverID)
-	s := &types.ServersRow{}
-	err = row.Scan(
-		&s.ID,
-		&s.ServerName,
-		&s.ChannelName,
-		&s.Activities,
-		&s.Schedule,
-		&s.MessageID,
-		&s.ShouldEditMessage,
-	)
+	sqlStmt := table.Servers.
+		SELECT(table.Servers.AllColumns).
+		WHERE(table.Servers.ID.EQ(sqlite.String(serverID)))
+
+	var s model.Servers
+	err = sqlStmt.Query(db, &s)
 	if err != nil {
-		return &types.ServersRow{}, err
+		return model.Servers{}, err
 	}
 
 	return s, nil
 }
 
 // FetchAllUsers gets all enrolled servers from the database
-func FetchAllUsers(serverID string) ([]*types.UsersRow, error) {
+func FetchAllUsers(serverID string) ([]model.Users, error) {
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
-		return []*types.UsersRow{}, err
+		return []model.Users{}, err
 	}
 	defer db.Close()
 
-	sqlStmt := `SELECT * FROM users WHERE server_id = ?`
+	sqlStmt := table.Users.
+		SELECT(table.Users.AllColumns).
+		WHERE(table.Users.ServerID.EQ(sqlite.String(serverID)))
 
-	var allUsers []*types.UsersRow
-
-	rows, err := db.Query(sqlStmt, serverID)
-	if err != nil {
-		return []*types.UsersRow{}, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		u := &types.UsersRow{}
-		err = rows.Scan(
-			&u.OSRSUsernameKey,
-			&u.OSRSUsername,
-			&u.OSRSAccountType,
-			&u.ServerID,
-			&u.DiscordUsername,
-			&u.DiscordUserID,
-		)
-		if err != nil {
-			return []*types.UsersRow{}, err
-		}
-
-		allUsers = append(allUsers, u)
-	}
+	var allUsers []model.Users
+	sqlStmt.Query(db, &allUsers)
 
 	return allUsers, nil
 }
 
 // FetchUser takes a Guild ID and returns the relevant
 // row from our database with the users existing config
-func FetchUser(serverID string, osrsUsername string) (*types.UsersRow, error) {
+func FetchUser(serverID string, osrsUsername string) (model.Users, error) {
 
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
-		return &types.UsersRow{}, err
+		return model.Users{}, err
 	}
 	defer db.Close()
 
-	sqlStmt := `SELECT * FROM users WHERE server_id = ? and osrs_username_key = ?`
-	row := db.QueryRow(
-		sqlStmt,
-		serverID,
-		types.OSRSUser{Username: osrsUsername}.EncodeUsername(),
-	)
-	u := &types.UsersRow{}
-	err = row.Scan(
-		&u.OSRSUsernameKey,
-		&u.OSRSUsername,
-		&u.OSRSAccountType,
-		&u.DiscordUsername,
-		&u.DiscordUserID,
-	)
+	sqlStmt := table.Users.
+		SELECT(table.Users.AllColumns).
+		WHERE(table.Users.ServerID.
+			EQ(sqlite.String(serverID)).
+			AND(table.Users.OsrsUsernameKey.EQ(sqlite.String(osrsUsername))),
+		)
+
+	u := model.Users{}
+	err = sqlStmt.Query(db, &u)
 	if err != nil {
-		return &types.UsersRow{}, err
+		return model.Users{}, err
 	}
 
 	return u, nil
