@@ -14,7 +14,7 @@ import (
 )
 
 // GenerateHiscoresFields takes a specific server and finds all the
-// activities that server is tracking andjet_schemaserates hiscores with the
+// activities that server is tracking and generates hiscores with the
 // users enrolled in that specific server
 func GenerateHiscoresFields(server model.Servers) ([]*discordgo.MessageEmbed, error) {
 	log.Printf("Generating Hiscores for server %s", server.ServerName)
