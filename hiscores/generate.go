@@ -138,7 +138,9 @@ func GetUserHiscores(allUsers []model.Users) (map[model.Users]types.Hiscores, er
 		log.Printf("Getting rank for user %s\n", user.OsrsUsername)
 		userHS, err := GetPlayerHiscores(user.OsrsUsernameKey)
 		if err != nil {
-			return nil, err
+			// If a user changes their RSN we don't want to break the entire process.
+			// We'll just exclude them from the results.
+			continue
 		}
 
 		userHiscores[user] = userHS
