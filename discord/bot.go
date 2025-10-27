@@ -8,11 +8,14 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
+	"github.com/michohl/osrs-clan-leaderboard/utils"
 )
 
 var (
 	// BotToken is the token used for creating our bot
 	BotToken = os.Getenv("DISCORD_BOT_TOKEN")
+	// DevMode is a CSV list of servers to limit this code to. Used for local dev
+	DevMode = os.Getenv("DEV_SERVERS")
 )
 
 func init() {
@@ -34,12 +37,32 @@ func StartBotListener() {
 
 	// Re-enable any crons configured in our database
 	for _, server := range allServers {
+		if DevMode != "" && !utils.IsServerInDevMode(server.ServerName) {
+			log.Printf("dev mode is set and server '%s' is not present in dev whitelist. Not enabling cron schedule", server.ServerName)
+			continue
+		}
 		EnableServerMessageCronjob(server, discord)
 	}
 
 	//discord.AddHandler(routeMessage)
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+		// We can't use the state cache because it is
+		// populated with all empty values
+		guild, err := s.Guild(i.GuildID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		// If the development flag is set then only process
+		// messages for servers that are whitelisted.
+		if DevMode != "" && !utils.IsServerInDevMode(guild.Name) {
+			log.Printf("dev mode is set and server '%s' is not present in dev whitelist. Skipping request", guild.Name)
+			return
+		}
+
 		switch i.Type {
 		case discordgo.InteractionApplicationCommand:
 			commandFunction := GetCommandHandler(i.ApplicationCommandData().Name)
