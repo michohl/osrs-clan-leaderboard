@@ -34,12 +34,28 @@ func StartBotListener() {
 
 	// Re-enable any crons configured in our database
 	for _, server := range allServers {
+		if !server.IsEnabled {
+			log.Printf("Server '%s' is currently disabled. Not enabling cron schedule", server.ServerName)
+			continue
+		}
 		EnableServerMessageCronjob(server, discord)
 	}
 
 	//discord.AddHandler(routeMessage)
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+		server, err := storage.FetchServer(i.GuildID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		if !server.IsEnabled {
+			log.Printf("Server '%s' is currently disabled. Skipping requested action", server.ServerName)
+			return
+		}
+
 		switch i.Type {
 		case discordgo.InteractionApplicationCommand:
 			commandFunction := GetCommandHandler(i.ApplicationCommandData().Name)

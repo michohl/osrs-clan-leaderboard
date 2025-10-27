@@ -33,7 +33,8 @@ func init() {
 		tracked_activities  TEXT    NOT NULL DEFAULT "",
 		schedule            TEXT    NOT NULL DEFAULT "",
 		message_id          TEXT    NOT NULL DEFAULT "",
-		should_edit_message BOOLEAN NOT NULL DEFAULT true
+		should_edit_message BOOLEAN NOT NULL DEFAULT true,
+		is_enabled          BOOLEAN NOT NULL DEFAULT true
     );
     CREATE TABLE IF NOT EXISTS users (
 		osrs_username_key TEXT NOT NULL DEFAULT "",
