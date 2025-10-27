@@ -33,7 +33,8 @@ func init() {
 		tracked_activities  TEXT    NOT NULL DEFAULT "",
 		schedule            TEXT    NOT NULL DEFAULT "",
 		message_id          TEXT    NOT NULL DEFAULT "",
-		should_edit_message BOOLEAN NOT NULL DEFAULT true
+		should_edit_message BOOLEAN NOT NULL DEFAULT true,
+		is_enabled          BOOLEAN NOT NULL DEFAULT true
     );
     CREATE TABLE IF NOT EXISTS users (
 		osrs_username_key TEXT NOT NULL DEFAULT "",
@@ -68,7 +69,20 @@ func EnrollServer(server model.Servers) error {
 	// then the server ID needs to be a separate column from id
 	sqlStmt := table.Servers.
 		INSERT(table.Servers.AllColumns).
-		MODEL(server)
+		MODEL(server).
+		ON_CONFLICT(table.Servers.ID).
+		DO_UPDATE(
+			sqlite.SET(
+				table.Servers.ID.SET(sqlite.String(server.ID)),
+				table.Servers.ServerName.SET(sqlite.String(server.ServerName)),
+				table.Servers.ChannelName.SET(sqlite.String(server.ChannelName)),
+				table.Servers.TrackedActivities.SET(sqlite.String(server.TrackedActivities)),
+				table.Servers.Schedule.SET(sqlite.String(server.Schedule)),
+				table.Servers.MessageID.SET(sqlite.String(server.MessageID)),
+				table.Servers.ShouldEditMessage.SET(sqlite.Bool(server.ShouldEditMessage)),
+				table.Servers.IsEnabled.SET(sqlite.Bool(server.IsEnabled)),
+			),
+		)
 
 	_, err = sqlStmt.Exec(db)
 	if err != nil {

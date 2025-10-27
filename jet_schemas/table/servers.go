@@ -24,6 +24,7 @@ type serversTable struct {
 	Schedule          sqlite.ColumnString
 	MessageID         sqlite.ColumnString
 	ShouldEditMessage sqlite.ColumnBool
+	IsEnabled         sqlite.ColumnBool
 
 	AllColumns     sqlite.ColumnList
 	MutableColumns sqlite.ColumnList
@@ -72,9 +73,10 @@ func newServersTableImpl(schemaName, tableName, alias string) serversTable {
 		ScheduleColumn          = sqlite.StringColumn("schedule")
 		MessageIDColumn         = sqlite.StringColumn("message_id")
 		ShouldEditMessageColumn = sqlite.BoolColumn("should_edit_message")
-		allColumns              = sqlite.ColumnList{IDColumn, ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn}
-		mutableColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn}
-		defaultColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn}
+		IsEnabledColumn         = sqlite.BoolColumn("is_enabled")
+		allColumns              = sqlite.ColumnList{IDColumn, ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn, IsEnabledColumn}
+		mutableColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn, IsEnabledColumn}
+		defaultColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn, IsEnabledColumn}
 	)
 
 	return serversTable{
@@ -88,6 +90,7 @@ func newServersTableImpl(schemaName, tableName, alias string) serversTable {
 		Schedule:          ScheduleColumn,
 		MessageID:         MessageIDColumn,
 		ShouldEditMessage: ShouldEditMessageColumn,
+		IsEnabled:         IsEnabledColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

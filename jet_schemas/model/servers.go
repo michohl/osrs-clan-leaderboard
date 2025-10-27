@@ -15,4 +15,5 @@ type Servers struct {
 	Schedule          string
 	MessageID         string
 	ShouldEditMessage bool
+	IsEnabled         bool
 }

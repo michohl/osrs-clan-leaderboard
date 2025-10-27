@@ -202,6 +202,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		TrackedActivities: activities,
 		Schedule:          cronSchedule,
 		ShouldEditMessage: shouldEditMessage,
+		IsEnabled:         true,
 	}
 
 	err = utils.ValidateServerConfig(s, server)
