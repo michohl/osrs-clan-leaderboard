@@ -45,13 +45,11 @@ func StartBotListener() {
 	discord.AddHandler(func(_ *discordgo.Session, _ *discordgo.Ready) { log.Println("Bot is up!") })
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		server, err := storage.FetchServer(i.GuildID)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		// The first time a user calls /configure this will
+		// not find any results so we shouldn't worry about errors here
+		server, _ := storage.FetchServer(i.GuildID)
 
-		if !server.IsEnabled {
+		if server.ServerName != "" && !server.IsEnabled {
 			log.Printf("Server '%s' is currently disabled. Skipping requested action", server.ServerName)
 			return
 		}
