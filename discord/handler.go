@@ -13,6 +13,7 @@ var commands = []*discordgo.ApplicationCommand{
 	&ConfigureCommandInfo,
 	&AssignCommandInfo,
 	&PostHiscoresCommandInfo,
+	&HiscoreCommandInfo,
 }
 
 // CommandHandler is the contract any function we want to use as a handler must satisfy
@@ -24,6 +25,11 @@ var commandHandlers = map[string]CommandHandler{
 	"configure": ConfigureHandler,
 	"assign":    AssignHandler,
 	"post":      PostHiscoresHandler,
+	"hiscore":   HiscoreHandler,
+}
+
+var autocompleteHandlers = map[string]CommandHandler{
+	"hiscore": HiscoreAutocompleteHandler,
 }
 
 // GetCommandHandler takes the user specified command and returns
@@ -50,5 +56,16 @@ func GetModalSubmitHandler(customID string) CommandHandler {
 		log.Printf("No Modal Submit Handler that matches %s\n", customID)
 	}
 
+	return nil
+}
+
+// GetAutocompleteHandler takes the user specified command and returns
+// the relevant function responsible for generating autocomplete options
+func GetAutocompleteHandler(command string) CommandHandler {
+	if h, ok := autocompleteHandlers[command]; ok {
+		return h
+	}
+
+	log.Printf("No Command Handler defined for %s\n", command)
 	return nil
 }

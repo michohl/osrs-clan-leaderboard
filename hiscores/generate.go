@@ -25,6 +25,18 @@ func GenerateHiscoresFields(server model.Servers) ([]*discordgo.MessageEmbed, er
 		return nil, err
 	}
 
+	embeds, err := FormatEmbeds(allActivities, allUsers)
+	if err != nil {
+		return nil, err
+	}
+
+	return embeds, nil
+}
+
+// FormatEmbeds takes a list of activities and users and formats that information into our final
+// set of embeds that we'll pass back to discord to present to the user in the message
+func FormatEmbeds(allActivities []string, allUsers []model.Users) ([]*discordgo.MessageEmbed, error) {
+
 	userHiscores, err := GetUserHiscores(allUsers)
 	if err != nil {
 		return nil, err
