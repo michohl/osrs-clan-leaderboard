@@ -151,6 +151,31 @@ func EnrollUser(user model.Users) error {
 	return nil
 }
 
+// RemoveUser removes a user from a specific server
+func RemoveUser(user model.Users) error {
+	log.Printf("Request received to remove OSRS user %s from server %s\n", user.OsrsUsername, user.ServerID)
+
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Users.
+		DELETE().
+		WHERE(table.Users.ServerID.
+			EQ(sqlite.String(user.ServerID)).
+			AND(table.Users.OsrsUsernameKey.EQ(sqlite.String(user.OsrsUsernameKey))),
+		)
+
+	_, err = sqlStmt.Exec(db)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // FetchAllServers gets all enrolled servers from the database
 func FetchAllServers() ([]model.Servers, error) {
 	db, err := sql.Open("sqlite3", DBFilePath)

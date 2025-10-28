@@ -12,6 +12,7 @@ var commands = []*discordgo.ApplicationCommand{
 	&PingCommandInfo,
 	&ConfigureCommandInfo,
 	&AssignCommandInfo,
+	&UnassignCommandInfo,
 	&PostHiscoresCommandInfo,
 	&HiscoreCommandInfo,
 }
@@ -24,12 +25,14 @@ var commandHandlers = map[string]CommandHandler{
 	"ping":      PingHandler,
 	"configure": ConfigureHandler,
 	"assign":    AssignHandler,
+	"unassign":  UnassignHandler,
 	"post":      PostHiscoresHandler,
 	"hiscore":   HiscoreHandler,
 }
 
 var autocompleteHandlers = map[string]CommandHandler{
-	"hiscore": HiscoreAutocompleteHandler,
+	"hiscore":  HiscoreAutocompleteHandler,
+	"unassign": HiscoreAutocompleteHandler,
 }
 
 // GetCommandHandler takes the user specified command and returns
