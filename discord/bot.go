@@ -65,6 +65,11 @@ func StartBotListener() {
 			if modalSubmitFunction != nil {
 				modalSubmitFunction(s, i)
 			}
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autocompleteFunction := GetAutocompleteHandler(i.ApplicationCommandData().Name)
+			if autocompleteFunction != nil {
+				autocompleteFunction(s, i)
+			}
 		default:
 			log.Printf("No handler for Interaction Type %s\n", i.Type)
 		}
