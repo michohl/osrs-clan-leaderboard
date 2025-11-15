@@ -21,18 +21,6 @@ func ValidateServerConfig(s *discordgo.Session, server model.Servers) error {
 
 	discoveredErrors := ""
 
-	// TODO: Remove this check once we can use a select menu to only provide
-	// the user with valid channels as options
-	_, err := GetChannel(s, server.ID, server.ChannelName)
-	if err != nil {
-		fmt.Println(err)
-		discoveredErrors = fmt.Sprintf(
-			"%s\n* Channel not found in server: %s",
-			discoveredErrors,
-			server.ChannelName,
-		)
-	}
-
 	if !IsValidCronExpression(server.Schedule) {
 		discoveredErrors = fmt.Sprintf(
 			"%s\n* Invalid cron expression: %s",

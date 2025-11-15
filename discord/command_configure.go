@@ -53,39 +53,39 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Printf("Unable to fetch an existing config for guild %s. Error: %s", i.GuildID, err)
 	}
 
+	defaultChannel := []discordgo.SelectMenuDefaultValue{}
+	channel, err := utils.GetChannel(s, i.GuildID, existingConfig.ChannelName)
+	if err != nil {
+		log.Printf(
+			"Unable to get channel details for %s in guild %s. Error: %s",
+			existingConfig.ChannelName,
+			i.GuildID,
+			err,
+		)
+	} else {
+		defaultChannel = append(
+			defaultChannel,
+			discordgo.SelectMenuDefaultValue{
+				ID:   channel.ID,
+				Type: discordgo.SelectMenuDefaultValueChannel,
+			},
+		)
+	}
+
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			CustomID: "modals_survey_configure_" + i.Interaction.Member.User.ID,
 			Title:    "Modals survey",
 			Components: []discordgo.MessageComponent{
-				/*
-					// This won't work until https://github.com/bwmarrin/discordgo/pull/1656
-					// is merged
-					discordgo.Label{
-						Label: "Which channel do you want hiscores posted to?",
-						Components: []discordgo.MessageComponent{
-							discordgo.SelectMenu{
-								MenuType:     discordgo.ChannelSelectMenu,
-								CustomID:     "channel",
-								Placeholder:  "Choose the Text Channel where you'd like hiscores to be posted",
-								ChannelTypes: []discordgo.ChannelType{discordgo.ChannelTypeGuildText},
-							},
-						},
-					},
-				*/
-				// TODO: Replace this with a Label + SelectMenu once Label support
-				// is merged into the discordgo library
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    "channel",
-							Label:       "Which channel to send messages to?",
-							Placeholder: "#something",
-							Style:       discordgo.TextInputShort,
-							Required:    true,
-							Value:       existingConfig.ChannelName,
-						},
+				discordgo.Label{
+					Label: "Which channel do you want hiscores posted to?",
+					Component: discordgo.SelectMenu{
+						MenuType:      discordgo.ChannelSelectMenu,
+						CustomID:      "channel",
+						Placeholder:   "Choose the Text Channel where you'd like hiscores to be posted",
+						DefaultValues: defaultChannel,
+						ChannelTypes:  []discordgo.ChannelType{discordgo.ChannelTypeGuildText},
 					},
 				},
 				discordgo.ActionsRow{
@@ -155,7 +155,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 
 	data := i.ModalSubmitData()
 
-	channelName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+	channelID := data.Components[0].(*discordgo.Label).Component.(*discordgo.SelectMenu).Values[0]
 	cronSchedule := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	activities := data.Components[2].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	shouldEditMessage, err := strconv.ParseBool(data.Components[3].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value)
@@ -166,26 +166,22 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		shouldEditMessage = false
 	}
 
-	// TODO: Switch back to this method once we get access to
-	// Labels with SelectMenus to get the Channel SelectMenu
-	/*
-				channel, err := s.State.Channel(channelID)
+	channel, err := s.State.Channel(channelID)
 
-				if err != nil {
-					if err == discordgo.ErrStateNotFound {
-						log.Printf("Channel %s not found in state cache, fetching from API...", channelID)
-						c, err := s.Channel(channelID)
-						if err != nil {
-							log.Println(err)
-		        return
-						}
-						channel = c
-					} else {
-						log.Println(err)
-		        return
-					}
-				}
-	*/
+	if err != nil {
+		if err == discordgo.ErrStateNotFound {
+			log.Printf("Channel %s not found in state cache, fetching from API...", channelID)
+			c, err := s.Channel(channelID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			channel = c
+		} else {
+			log.Println(err)
+			return
+		}
+	}
 
 	// We can't use the state cache because it is
 	// populated with all empty values
@@ -198,7 +194,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	server := model.Servers{
 		ID:                guild.ID,
 		ServerName:        guild.Name,
-		ChannelName:       channelName,
+		ChannelName:       channel.Name,
 		TrackedActivities: activities,
 		Schedule:          cronSchedule,
 		ShouldEditMessage: shouldEditMessage,
@@ -213,7 +209,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Flags: discordgo.MessageFlagsEphemeral,
 
-			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channelName, err),
+			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channel.Name, err),
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
@@ -262,7 +258,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 		Flags: discordgo.MessageFlagsEphemeral,
 
-		Content: fmt.Sprintf("Channel %s is now successfully configured!", channelName),
+		Content: fmt.Sprintf("Channel %s is now successfully configured!", channel.Name),
 	})
 
 	if err != nil {
