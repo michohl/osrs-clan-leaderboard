@@ -13,10 +13,18 @@ ranking only the enlisted users.
 
 You can add this application to your server by using the following invite link: https://discord.com/oauth2/authorize?client_id=1418042803719639112
 
-### Tweak Permissions
+### Required Permissions
 
 Once the application is added you may have to tweak either server permissions or channel
 permissions to allow the bot to post/edit messages.
+
+The following channel permissions are required for this app to work:
+
+* General Channel Permissions
+  * View Channel
+* Text Channel Permissions
+  * Send Messages
+  * Embed Links
 
 ### Configure the Server Settings
 
