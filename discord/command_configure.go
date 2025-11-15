@@ -113,16 +113,15 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 						},
 					},
 				},
-				// TODO: Replace with a dropdown menu with yes/no options
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    "edit",
-							Label:       "Edit message instead of posting new?",
-							Style:       discordgo.TextInputShort,
-							Placeholder: "true",
-							Required:    true,
-							Value:       fmt.Sprintf("%t", existingConfig.ShouldEditMessage),
+				discordgo.Label{
+					Label: "re-use existing message for updates?",
+					Component: discordgo.SelectMenu{
+						MenuType:    discordgo.StringSelectMenu,
+						CustomID:    "edit",
+						Placeholder: "Edit message instead of posting new?",
+						Options: []discordgo.SelectMenuOption{
+							{Label: "Yes", Value: "true", Default: existingConfig.ShouldEditMessage == true},
+							{Label: "No", Value: "false", Default: existingConfig.ShouldEditMessage == false},
 						},
 					},
 				},
@@ -158,7 +157,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	channelID := data.Components[0].(*discordgo.Label).Component.(*discordgo.SelectMenu).Values[0]
 	cronSchedule := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	activities := data.Components[2].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
-	shouldEditMessage, err := strconv.ParseBool(data.Components[3].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value)
+	shouldEditMessage, err := strconv.ParseBool(data.Components[3].(*discordgo.Label).Component.(*discordgo.SelectMenu).Values[0])
 	if err != nil {
 		// It's way less headache to just force a "good" input if the user
 		// puts something bogus. This will end up replaced with a menu select later
