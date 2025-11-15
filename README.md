@@ -5,6 +5,8 @@ OSRS usernames and a list of desired skills/activities to keep track of then
 maintain a message in a discord channel that will display a ranking of each hiscore
 ranking only the enlisted users.
 
+![hiscores_message](docs/screenshots/example_hiscores.png)
+
 ## How to Enroll Your Discord Server?
 
 ### Add the Application to the Server
@@ -21,9 +23,11 @@ permissions to allow the bot to post/edit messages.
 From any channel in the server you can use the command `/configure` to update all the server specific settings required to begin posting hiscores messages.
 You will need the following settings filled out:
 
-> Which channel to send messages to?
+![configure_modal](docs/screenshots/configure_modal.png)
 
-This should be the name of any channel in your server that this bot has permissions in.
+> Which channel do you want hiscores posted to?
+
+This should be any channel in your server that this bot has permissions in.
 
 > Cron Schedule to Update Hiscores (CST)
 
@@ -39,9 +43,9 @@ This is a **comma separated list** of activities that you want to track.
 To find a complete list of options refer to the official hiscores API list of skills
 and activities: https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores
 
-> Edit message instead of posting new?
+> re-use existing message for updates?
 
-This can only be `true` or `false`. If the value is set to `true` then the bot will post
+This can only be `Yes` or `No`. If the value is set to `Yes` then the bot will post
 a new message once and then every time it would post from there on out it will edit the
 existing message rather than posting a new one every time.
 
@@ -52,9 +56,9 @@ Any user from any channel can use the command `/assign` to add their OSRS user t
 of users that will be reported on in the final hiscores message. This command requires the
 following input:
 
-* Discord Username
+* Discord Username **(Has select menu)**
 * OSRS Username
-* OSRS Account Type (Main, Ironman, Hardcore Ironman, etc.)
+* OSRS Account Type (Main, Ironman, Hardcore Ironman, etc.) **(Has select menu)**
 
 The command will provide helpful fields that will provide valid choices for you.
 
