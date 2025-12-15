@@ -13,12 +13,17 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
-// PostHiscoresMessage posts a message to the user configured
+// PostHiscoresMessages posts a message per activity to the user configured
 // channel. This is done on a cron configured by the user
-func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
+func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 
 	// Fetch the latest data from our db in case it has changed
 	server, err := storage.FetchServer(serverID)
+	if err != nil {
+		return err
+	}
+
+	messages, err := storage.FetchAllMessages(serverID)
 	if err != nil {
 		return err
 	}
@@ -28,23 +33,49 @@ func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
-	hiscoresEmbeds, err := hiscores.GenerateHiscoresFields(server)
+	allUsers, err := storage.FetchAllUsers(server.ID)
 	if err != nil {
 		return err
 	}
 
-	if server.MessageID != "" && server.ShouldEditMessage {
-		log.Printf("Editing existing scheduled hiscores message for %s\n", server.ServerName)
-		s.ChannelMessageEditEmbeds(channel.ID, server.MessageID, hiscoresEmbeds)
-	} else {
-		log.Printf("Posting new scheduled hiscores message for %s\n", server.ServerName)
-		message, err := s.ChannelMessageSendEmbeds(channel.ID, hiscoresEmbeds)
+	userHiscores, err := hiscores.GetUserHiscores(allUsers)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Generating Hiscores messages for server %s", server.ServerName)
+
+	for _, activityMessage := range messages {
+		hiscoreEmbeds, err := hiscores.FormatEmbeds(activityMessage.Activity, userHiscores)
 		if err != nil {
 			return err
 		}
 
+		// We remove the message every time instead of editing the existing message so we can guarantee
+		// that the order the skills are posted in matches the order the server admin configured
+		if activityMessage.MessageID != "" && server.ShouldEditMessage {
+			log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+			err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
+			if err != nil {
+				return err
+			}
+
+			err = storage.RemoveMessage(activityMessage)
+			if err != nil {
+				return err
+			}
+		}
+
+		log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+		newMessage, err := s.ChannelMessageSendEmbed(channel.ID, hiscoreEmbeds)
+		if err != nil {
+			return err
+		}
+
+		activityMessage.MessageID = newMessage.ID
+
 		// Update our records to keep track of this message so we can edit it later
-		err = storage.UpdateServerMessageID(server, message.ID)
+		err = storage.EnrollMessage(server, activityMessage)
 		if err != nil {
 			return err
 		}
@@ -61,7 +92,7 @@ func PostHiscoresMessage(serverID string, s *discordgo.Session) error {
 func EnableServerMessageCronjob(server model.Servers, s *discordgo.Session) error {
 
 	jobID, err := schedule.Cron.AddFunc(server.Schedule, func() {
-		PostHiscoresMessage(server.ID, s)
+		PostHiscoresMessages(server.ID, s)
 	})
 	if err != nil {
 		log.Printf("Unable to schedule cron job for server %s because %s\n", server.ServerName, err)

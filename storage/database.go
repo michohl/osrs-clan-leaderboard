@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"slices"
+	"strings"
 
 	// https://github.com/mattn/go-sqlite3/issues/335
 	_ "github.com/mattn/go-sqlite3"
@@ -30,9 +32,7 @@ func init() {
         id                  TEXT    NOT NULL PRIMARY KEY,
         server_name         TEXT    NOT NULL DEFAULT "",
 		channel_name        TEXT    NOT NULL DEFAULT "",
-		tracked_activities  TEXT    NOT NULL DEFAULT "",
 		schedule            TEXT    NOT NULL DEFAULT "",
-		message_id          TEXT    NOT NULL DEFAULT "",
 		should_edit_message BOOLEAN NOT NULL DEFAULT true,
 		is_enabled          BOOLEAN NOT NULL DEFAULT true
     );
@@ -45,17 +45,23 @@ func init() {
 		discord_user_id   TEXT NOT NULL DEFAULT "",
 		PRIMARY KEY (osrs_username_key, server_id)
     );
+	CREATE TABLE IF NOT EXISTS messages (
+		message_id        TEXT NOT NULL DEFAULT "",
+		server_id         TEXT NOT NULL DEFAULT "",
+		activity          TEXT NOT NULL DEFAULT "",
+		PRIMARY KEY (server_id, activity)
+	);
     `
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Tables 'servers' and 'users' created successfully")
+	log.Println("All tables created successfully")
 }
 
 // EnrollServer takes form data from our enrollment survey and
 // commits that data to our database
-func EnrollServer(server model.Servers) error {
+func EnrollServer(server model.Servers, activities string) error {
 	log.Printf("Request received to enroll server: %s (ID: %s)\n", server.ServerName, server.ID)
 
 	db, err := sql.Open("sqlite3", DBFilePath)
@@ -76,9 +82,7 @@ func EnrollServer(server model.Servers) error {
 				table.Servers.ID.SET(sqlite.String(server.ID)),
 				table.Servers.ServerName.SET(sqlite.String(server.ServerName)),
 				table.Servers.ChannelName.SET(sqlite.String(server.ChannelName)),
-				table.Servers.TrackedActivities.SET(sqlite.String(server.TrackedActivities)),
 				table.Servers.Schedule.SET(sqlite.String(server.Schedule)),
-				table.Servers.MessageID.SET(sqlite.String(server.MessageID)),
 				table.Servers.ShouldEditMessage.SET(sqlite.Bool(server.ShouldEditMessage)),
 				table.Servers.IsEnabled.SET(sqlite.Bool(server.IsEnabled)),
 			),
@@ -89,31 +93,32 @@ func EnrollServer(server model.Servers) error {
 		return err
 	}
 
-	return nil
-}
+	newActivities := strings.Split(activities, ",")
 
-// UpdateServerMessageID takes a MessageID for a message we posted
-// and stores it so we can update that message later
-func UpdateServerMessageID(server model.Servers, messageID string) error {
-	log.Printf("Request received to update message ID %s for server: %s (ID: %s)\n", messageID, server.ServerName, server.ID)
-
-	db, err := sql.Open("sqlite3", DBFilePath)
+	existingActivityMessages, err := FetchAllMessages(server.ID)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
-	// This design makes it so each server (guild) can only have one
-	// channel configured. If we want to allow multiple channels per server
-	// then the server ID needs to be a separate column from id
-	sqlStmt := table.Servers.
-		UPDATE(table.Servers.MessageID).
-		SET(table.Servers.MessageID.SET(sqlite.String(messageID))).
-		WHERE(table.Servers.ID.EQ(sqlite.String(server.ID)))
+	for _, m := range existingActivityMessages {
+		if !slices.Contains(newActivities, m.Activity) {
+			RemoveMessage(m)
+		}
+	}
 
-	_, err = sqlStmt.Exec(db)
-	if err != nil {
-		return err
+	for _, activity := range newActivities {
+
+		_, err = FetchMessage(server.ID, activity)
+		if err != nil {
+			err = EnrollMessage(server, model.Messages{
+				MessageID: "",
+				ServerID:  server.ID,
+				Activity:  activity,
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -260,4 +265,110 @@ func FetchUser(serverID string, osrsUsername string) (model.Users, error) {
 	}
 
 	return u, nil
+}
+
+// FetchAllMessages takes a Guild ID and returns the relevant
+// rows from our database that match the Guid ID
+func FetchAllMessages(serverID string) ([]model.Messages, error) {
+
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return []model.Messages{}, err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Messages.
+		SELECT(table.Messages.AllColumns).
+		WHERE(table.Messages.ServerID.EQ(sqlite.String(serverID)))
+
+	var m []model.Messages
+	err = sqlStmt.Query(db, &m)
+	if err != nil {
+		return []model.Messages{}, err
+	}
+
+	return m, nil
+}
+
+// FetchMessage takes a Guild ID and returns the relevant
+// row from our database that matches the specified activity
+func FetchMessage(serverID, activity string) (model.Messages, error) {
+
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return model.Messages{}, err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Messages.
+		SELECT(table.Messages.AllColumns).
+		WHERE(table.Messages.ServerID.
+			EQ(sqlite.String(serverID)).
+			AND(table.Messages.Activity.EQ(sqlite.String(activity))),
+		)
+
+	var m model.Messages
+	err = sqlStmt.Query(db, &m)
+	if err != nil {
+		return model.Messages{}, err
+	}
+
+	return m, nil
+}
+
+// EnrollMessage takes a MessageID for a message we posted
+// and stores it so we can update that message later
+func EnrollMessage(server model.Servers, message model.Messages) error {
+	log.Printf("Request received to enroll message ID %s for server: %s (ID: %s) and activity %s\n", message.MessageID, server.ServerName, server.ID, message.Activity)
+
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Messages.
+		INSERT(table.Messages.AllColumns).
+		MODEL(message).
+		ON_CONFLICT(table.Messages.ServerID, table.Messages.Activity).
+		DO_UPDATE(
+			sqlite.SET(
+				table.Messages.MessageID.SET(sqlite.String(message.MessageID)),
+				table.Messages.ServerID.SET(sqlite.String(server.ID)),
+				table.Messages.Activity.SET(sqlite.String(message.Activity)),
+			),
+		)
+
+	_, err = sqlStmt.Exec(db)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RemoveMessage takes a message and removes the matching row from the database
+func RemoveMessage(message model.Messages) error {
+	log.Printf("Request received to remove message ID %s for server: %s and activity %s\n", message.MessageID, message.ServerID, message.Activity)
+
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Messages.
+		DELETE().
+		WHERE(table.Messages.Activity.
+			EQ(sqlite.String(message.Activity)).
+			AND(table.Messages.ServerID.EQ(sqlite.String(message.ServerID))).
+			AND(table.Messages.MessageID.EQ(sqlite.String(message.MessageID))),
+		)
+
+	_, err = sqlStmt.Exec(db)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

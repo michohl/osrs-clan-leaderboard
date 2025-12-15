@@ -108,13 +108,30 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		)
 	}
 
-	hiscoresEmbeds, err := hiscores.FormatEmbeds(activities, []model.Users{osrsUser})
+	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser})
 	if err != nil {
+		log.Println(err)
+
 		discoveredErrors = fmt.Sprintf(
 			"%s\n* %s",
 			discoveredErrors,
-			err,
+			fmt.Sprintf("Unable to find hiscores for user '%s'. Error: %s", osrsUsername, err),
 		)
+	}
+
+	hiscoresEmbeds := []*discordgo.MessageEmbed{}
+
+	for _, activity := range activities {
+		embeds, err := hiscores.FormatEmbeds(activity, userHiscores)
+		if err != nil {
+			discoveredErrors = fmt.Sprintf(
+				"%s\n* %s",
+				discoveredErrors,
+				err,
+			)
+		}
+
+		hiscoresEmbeds = append(hiscoresEmbeds, embeds)
 	}
 
 	if discoveredErrors != "" {

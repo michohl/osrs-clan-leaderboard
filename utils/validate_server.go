@@ -2,10 +2,8 @@ package utils
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/michohl/osrs-clan-leaderboard/hiscores"
 	"github.com/robfig/cron/v3"
 
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
@@ -29,31 +27,11 @@ func ValidateServerConfig(s *discordgo.Session, server model.Servers) error {
 		)
 	}
 
-	totalActivities := len(strings.Split(server.TrackedActivities, ","))
-	if totalActivities > 10 {
-		discoveredErrors = fmt.Sprintf(
-			"%s\n* More than 10 Activities specified: %d",
-			discoveredErrors,
-			totalActivities,
-		)
-	}
-
-	for activity := range strings.SplitSeq(server.TrackedActivities, ",") {
-		_, err := hiscores.IsActivityOrSkill(activity)
-		if err != nil {
-			discoveredErrors = fmt.Sprintf(
-				"%s\n* %s",
-				discoveredErrors,
-				err,
-			)
-		}
-	}
-
 	if discoveredErrors == "" {
 		return nil
 	}
 
-	return fmt.Errorf("%s", discoveredErrors)
+	return fmt.Errorf("_Server Config Issues:_%s", discoveredErrors)
 }
 
 // IsValidCronExpression takes a cron expression and returns whether it is
