@@ -20,9 +20,7 @@ type serversTable struct {
 	ID                sqlite.ColumnString
 	ServerName        sqlite.ColumnString
 	ChannelName       sqlite.ColumnString
-	TrackedActivities sqlite.ColumnString
 	Schedule          sqlite.ColumnString
-	MessageID         sqlite.ColumnString
 	ShouldEditMessage sqlite.ColumnBool
 	IsEnabled         sqlite.ColumnBool
 
@@ -69,14 +67,12 @@ func newServersTableImpl(schemaName, tableName, alias string) serversTable {
 		IDColumn                = sqlite.StringColumn("id")
 		ServerNameColumn        = sqlite.StringColumn("server_name")
 		ChannelNameColumn       = sqlite.StringColumn("channel_name")
-		TrackedActivitiesColumn = sqlite.StringColumn("tracked_activities")
 		ScheduleColumn          = sqlite.StringColumn("schedule")
-		MessageIDColumn         = sqlite.StringColumn("message_id")
 		ShouldEditMessageColumn = sqlite.BoolColumn("should_edit_message")
 		IsEnabledColumn         = sqlite.BoolColumn("is_enabled")
-		allColumns              = sqlite.ColumnList{IDColumn, ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn, IsEnabledColumn}
-		mutableColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn, IsEnabledColumn}
-		defaultColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, TrackedActivitiesColumn, ScheduleColumn, MessageIDColumn, ShouldEditMessageColumn, IsEnabledColumn}
+		allColumns              = sqlite.ColumnList{IDColumn, ServerNameColumn, ChannelNameColumn, ScheduleColumn, ShouldEditMessageColumn, IsEnabledColumn}
+		mutableColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, ScheduleColumn, ShouldEditMessageColumn, IsEnabledColumn}
+		defaultColumns          = sqlite.ColumnList{ServerNameColumn, ChannelNameColumn, ScheduleColumn, ShouldEditMessageColumn, IsEnabledColumn}
 	)
 
 	return serversTable{
@@ -86,9 +82,7 @@ func newServersTableImpl(schemaName, tableName, alias string) serversTable {
 		ID:                IDColumn,
 		ServerName:        ServerNameColumn,
 		ChannelName:       ChannelNameColumn,
-		TrackedActivities: TrackedActivitiesColumn,
 		Schedule:          ScheduleColumn,
-		MessageID:         MessageIDColumn,
 		ShouldEditMessage: ShouldEditMessageColumn,
 		IsEnabled:         IsEnabledColumn,
 

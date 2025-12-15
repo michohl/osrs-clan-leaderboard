@@ -11,9 +11,7 @@ type Servers struct {
 	ID                string `sql:"primary_key"`
 	ServerName        string
 	ChannelName       string
-	TrackedActivities string
 	Schedule          string
-	MessageID         string
 	ShouldEditMessage bool
 	IsEnabled         bool
 }

@@ -53,6 +53,16 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Printf("Unable to fetch an existing config for guild %s. Error: %s", i.GuildID, err)
 	}
 
+	existingMessages, err := storage.FetchAllMessages(i.GuildID)
+	if err != nil {
+		log.Printf("Unable to fetch existing tracked activities for guild %s. Error: %s", i.GuildID, err)
+	}
+
+	existingActivities := []string{}
+	for _, m := range existingMessages {
+		existingActivities = append(existingActivities, m.Activity)
+	}
+
 	defaultChannel := []discordgo.SelectMenuDefaultValue{}
 	channel, err := utils.GetChannel(s, i.GuildID, existingConfig.ChannelName)
 	if err != nil {
@@ -108,7 +118,7 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 							Style:       discordgo.TextInputParagraph,
 							Placeholder: fmt.Sprint(strings.Join(allSkills[0:6], ",")),
 							Required:    true,
-							Value:       existingConfig.TrackedActivities,
+							Value:       strings.Join(existingActivities, ","),
 							MaxLength:   2000,
 						},
 					},
@@ -194,21 +204,27 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		ID:                guild.ID,
 		ServerName:        guild.Name,
 		ChannelName:       channel.Name,
-		TrackedActivities: activities,
 		Schedule:          cronSchedule,
 		ShouldEditMessage: shouldEditMessage,
 		IsEnabled:         true,
 	}
 
-	err = utils.ValidateServerConfig(s, server)
-	if err != nil {
+	serverErrs := utils.ValidateServerConfig(s, server)
+	activityErrs := utils.ValidateActivities(activities)
+
+	if serverErrs != nil || activityErrs != nil {
+		errMessage := fmt.Sprintf(
+			"\n%s\n%s",
+			serverErrs,
+			activityErrs,
+		)
 		cronEmoji := types.ApplicationEmojis["crontab"]
 		toolsEmoji := types.ApplicationEmojis["tools"]
 
 		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Flags: discordgo.MessageFlagsEphemeral,
 
-			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channel.Name, err),
+			Content: fmt.Sprintf("Failed to configure channel %s. Reasons are: %s", channel.Name, errMessage),
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
@@ -244,7 +260,7 @@ func ConfigureModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	}
 
 	// Once we know what server the user selected we can store that choice
-	err = storage.EnrollServer(server)
+	err = storage.EnrollServer(server, activities)
 	if err != nil {
 		log.Println(err)
 		return

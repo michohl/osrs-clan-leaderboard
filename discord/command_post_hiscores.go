@@ -34,7 +34,7 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Generating hiscores message data...",
+			Content: "Generating hiscores message(s) data...",
 		},
 	})
 	if err != nil {
@@ -42,13 +42,13 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	err = PostHiscoresMessage(i.GuildID, s)
+	err = PostHiscoresMessages(i.GuildID, s)
 	if err != nil {
 		log.Println(err)
 
 		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Failed to post hiscores message...",
+			Content: "Failed to post hiscores message(s)...",
 		})
 		if err != nil {
 			log.Println(err)
@@ -60,7 +60,7 @@ func postHiscoresCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 		Flags:   discordgo.MessageFlagsEphemeral,
-		Content: "Hiscores message posted!",
+		Content: "Hiscores message(s) posted!",
 	})
 	if err != nil {
 		log.Println(err)

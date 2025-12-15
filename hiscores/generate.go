@@ -7,137 +7,103 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
-// GenerateHiscoresFields takes a specific server and finds all the
-// activities that server is tracking and generates hiscores with the
-// users enrolled in that specific server
-func GenerateHiscoresFields(server model.Servers) ([]*discordgo.MessageEmbed, error) {
-	log.Printf("Generating Hiscores for server %s", server.ServerName)
-
-	allActivities := strings.Split(server.TrackedActivities, ",")
-	allUsers, err := storage.FetchAllUsers(server.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	embeds, err := FormatEmbeds(allActivities, allUsers)
-	if err != nil {
-		return nil, err
-	}
-
-	return embeds, nil
-}
-
-// FormatEmbeds takes a list of activities and users and formats that information into our final
+// FormatEmbeds takes an activity and user hiscores and formats that information into our final
 // set of embeds that we'll pass back to discord to present to the user in the message
-func FormatEmbeds(allActivities []string, allUsers []model.Users) ([]*discordgo.MessageEmbed, error) {
+func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores) (*discordgo.MessageEmbed, error) {
+	activity = strings.Trim(activity, " ")
+	log.Printf("Generating fields for Activity/Skill %s\n", activity)
 
-	userHiscores, err := GetUserHiscores(allUsers)
+	activityKind, err := IsActivityOrSkill(activity)
 	if err != nil {
 		return nil, err
 	}
 
-	var embeds []*discordgo.MessageEmbed
+	userField := discordgo.MessageEmbedField{
+		Name:   "Username",
+		Value:  "",
+		Inline: true,
+	}
 
-	for _, activity := range allActivities {
-		activity = strings.Trim(activity, " ")
-		log.Printf("Generating fields for Activity/Skill %s\n", activity)
+	quantifierField := discordgo.MessageEmbedField{
+		Name:   "",
+		Value:  "",
+		Inline: true,
+	}
 
-		activityKind, err := IsActivityOrSkill(activity)
-		if err != nil {
-			return nil, err
-		}
+	rankField := discordgo.MessageEmbedField{
+		Name:   "Rank",
+		Value:  "",
+		Inline: true,
+	}
 
-		userField := discordgo.MessageEmbedField{
-			Name:   "Username",
-			Value:  "",
-			Inline: true,
-		}
+	switch activityKind {
+	case "activity":
+		quantifierField.Name = "Score"
+	case "skill":
+		quantifierField.Name = "Level"
+	}
 
-		quantifierField := discordgo.MessageEmbedField{
-			Name:   "",
-			Value:  "",
-			Inline: true,
-		}
+	sortedUserHiscores, err := SortHiscores(userHiscores, activity)
+	if err != nil {
+		return nil, err
+	}
 
-		rankField := discordgo.MessageEmbedField{
-			Name:   "Rank",
-			Value:  "",
-			Inline: true,
-		}
+	for _, rankedUser := range sortedUserHiscores.Rankings {
+
+		userField.Value = fmt.Sprintf(
+			"%s\n%d - <:%s> %s <@%s>",
+			userField.Value,
+			rankedUser.LocalRank,
+			types.ApplicationEmojis[rankedUser.User.OsrsAccountType].APIName(),
+			rankedUser.User.OsrsUsername,
+			rankedUser.User.DiscordUserID,
+		)
 
 		switch activityKind {
-		case "activity":
-			quantifierField.Name = "Score"
 		case "skill":
-			quantifierField.Name = "Level"
-		}
-
-		sortedUserHiscores, err := SortHiscores(userHiscores, activity)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, rankedUser := range sortedUserHiscores.Rankings {
-
-			userField.Value = fmt.Sprintf(
-				"%s\n%d - <:%s> %s <@%s>",
-				userField.Value,
-				rankedUser.LocalRank,
-				types.ApplicationEmojis[rankedUser.User.OsrsAccountType].APIName(),
-				rankedUser.User.OsrsUsername,
-				rankedUser.User.DiscordUserID,
-			)
-
-			switch activityKind {
-			case "skill":
-				quantifierField.Value = fmt.Sprintf(
-					"%s\n%d",
-					quantifierField.Value,
-					rankedUser.Level,
-				)
-			case "activity":
-				quantifierField.Value = fmt.Sprintf(
-					"%s\n%d",
-					quantifierField.Value,
-					rankedUser.Score,
-				)
-			}
-
-			rankField.Value = fmt.Sprintf(
+			quantifierField.Value = fmt.Sprintf(
 				"%s\n%d",
-				rankField.Value,
-				rankedUser.Rank,
+				quantifierField.Value,
+				rankedUser.Level,
 			)
-
+		case "activity":
+			quantifierField.Value = fmt.Sprintf(
+				"%s\n%d",
+				quantifierField.Value,
+				rankedUser.Score,
+			)
 		}
 
-		emojiName := types.NormalizeEmojiName(activity)
-
-		activityEmoji, ok := types.ApplicationEmojis[emojiName]
-		if !ok {
-			activityEmoji = types.ApplicationEmojis["osrstrophy"]
-		}
-
-		emoji := fmt.Sprintf("<:%s>", activityEmoji.APIName())
-
-		embeds = append(embeds, &discordgo.MessageEmbed{
-			Title: fmt.Sprintf("%s %s", emoji, activity),
-			Fields: []*discordgo.MessageEmbedField{
-				&userField,
-				&quantifierField,
-				&rankField,
-			},
-		})
+		rankField.Value = fmt.Sprintf(
+			"%s\n%d",
+			rankField.Value,
+			rankedUser.Rank,
+		)
 
 	}
 
-	return embeds, nil
+	emojiName := types.NormalizeEmojiName(activity)
+
+	activityEmoji, ok := types.ApplicationEmojis[emojiName]
+	if !ok {
+		activityEmoji = types.ApplicationEmojis["osrstrophy"]
+	}
+
+	emoji := fmt.Sprintf("<:%s>", activityEmoji.APIName())
+
+	return &discordgo.MessageEmbed{
+		Title: fmt.Sprintf("%s %s", emoji, activity),
+		Fields: []*discordgo.MessageEmbedField{
+			&userField,
+			&quantifierField,
+			&rankField,
+		},
+	}, nil
 }
 
 // GetUserHiscores takes a list of users and returns a map populated with all of the
