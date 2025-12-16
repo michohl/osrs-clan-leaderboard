@@ -46,9 +46,10 @@ func init() {
 		PRIMARY KEY (osrs_username_key, server_id)
     );
 	CREATE TABLE IF NOT EXISTS messages (
-		message_id        TEXT NOT NULL DEFAULT "",
-		server_id         TEXT NOT NULL DEFAULT "",
-		activity          TEXT NOT NULL DEFAULT "",
+		message_id        TEXT    NOT NULL DEFAULT "",
+		server_id         TEXT    NOT NULL DEFAULT "",
+		activity          TEXT    NOT NULL DEFAULT "",
+		position          INTEGER NOT NULL DEFAULT "",
 		PRIMARY KEY (server_id, activity)
 	);
     `
@@ -106,14 +107,17 @@ func EnrollServer(server model.Servers, activities string) error {
 		}
 	}
 
-	for _, activity := range newActivities {
+	for position, activity := range newActivities {
 
-		_, err = FetchMessage(server.ID, activity)
-		if err != nil {
+		m, messageErr := FetchMessage(server.ID, activity)
+
+		// If we can't find a message or if the position changed create/update the message row
+		if messageErr != nil || int32(position) != m.Position {
 			err = EnrollMessage(server, model.Messages{
 				MessageID: "",
 				ServerID:  server.ID,
 				Activity:  activity,
+				Position:  int32(position),
 			})
 			if err != nil {
 				return err
@@ -279,7 +283,8 @@ func FetchAllMessages(serverID string) ([]model.Messages, error) {
 
 	sqlStmt := table.Messages.
 		SELECT(table.Messages.AllColumns).
-		WHERE(table.Messages.ServerID.EQ(sqlite.String(serverID)))
+		WHERE(table.Messages.ServerID.EQ(sqlite.String(serverID))).
+		ORDER_BY(table.Messages.Position)
 
 	var m []model.Messages
 	err = sqlStmt.Query(db, &m)
@@ -336,6 +341,7 @@ func EnrollMessage(server model.Servers, message model.Messages) error {
 				table.Messages.MessageID.SET(sqlite.String(message.MessageID)),
 				table.Messages.ServerID.SET(sqlite.String(server.ID)),
 				table.Messages.Activity.SET(sqlite.String(message.Activity)),
+				table.Messages.Position.SET(sqlite.Int32(message.Position)),
 			),
 		)
 
