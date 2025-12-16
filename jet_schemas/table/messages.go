@@ -20,6 +20,7 @@ type messagesTable struct {
 	MessageID sqlite.ColumnString
 	ServerID  sqlite.ColumnString
 	Activity  sqlite.ColumnString
+	Position  sqlite.ColumnInteger
 
 	AllColumns     sqlite.ColumnList
 	MutableColumns sqlite.ColumnList
@@ -64,9 +65,10 @@ func newMessagesTableImpl(schemaName, tableName, alias string) messagesTable {
 		MessageIDColumn = sqlite.StringColumn("message_id")
 		ServerIDColumn  = sqlite.StringColumn("server_id")
 		ActivityColumn  = sqlite.StringColumn("activity")
-		allColumns      = sqlite.ColumnList{MessageIDColumn, ServerIDColumn, ActivityColumn}
-		mutableColumns  = sqlite.ColumnList{ServerIDColumn, ActivityColumn}
-		defaultColumns  = sqlite.ColumnList{ServerIDColumn, ActivityColumn}
+		PositionColumn  = sqlite.IntegerColumn("position")
+		allColumns      = sqlite.ColumnList{MessageIDColumn, ServerIDColumn, ActivityColumn, PositionColumn}
+		mutableColumns  = sqlite.ColumnList{MessageIDColumn, PositionColumn}
+		defaultColumns  = sqlite.ColumnList{MessageIDColumn, ServerIDColumn, ActivityColumn, PositionColumn}
 	)
 
 	return messagesTable{
@@ -76,6 +78,7 @@ func newMessagesTableImpl(schemaName, tableName, alias string) messagesTable {
 		MessageID: MessageIDColumn,
 		ServerID:  ServerIDColumn,
 		Activity:  ActivityColumn,
+		Position:  PositionColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
