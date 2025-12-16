@@ -49,7 +49,7 @@ func init() {
 		message_id        TEXT    NOT NULL DEFAULT "",
 		server_id         TEXT    NOT NULL DEFAULT "",
 		activity          TEXT    NOT NULL DEFAULT "",
-		position          INTEGER NOT NULL DEFAULT "",
+		position          INTEGER NOT NULL DEFAULT 0,
 		PRIMARY KEY (server_id, activity)
 	);
     `
