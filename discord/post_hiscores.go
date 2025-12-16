@@ -2,6 +2,8 @@ package discord
 
 import (
 	"log"
+	"slices"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/hiscores"
@@ -43,43 +45,66 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
-	log.Printf("Generating Hiscores messages for server %s", server.ServerName)
+	log.Printf("Generating %d Hiscores messages for server %s", len(messages), server.ServerName)
 
-	for _, activityMessage := range messages {
-		hiscoreEmbeds, err := hiscores.FormatEmbeds(activityMessage.Activity, userHiscores)
-		if err != nil {
-			return err
-		}
+	var wg sync.WaitGroup
 
-		// We remove the message every time instead of editing the existing message so we can guarantee
-		// that the order the skills are posted in matches the order the server admin configured
-		if activityMessage.MessageID != "" && server.ShouldEditMessage {
-			log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
-			err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
+	// Keep track of each activity message that has been posted
+	// so we can prevent threads from skipping past each other
+	positionsPosted := []int{-1}
+
+	for i, activityMessage := range messages {
+		wg.Add(1)
+		go func() error {
+			defer wg.Done()
+			log.Printf("Generating Hiscores message for activity %s", activityMessage.Activity)
+			he, err := hiscores.FormatEmbeds(activityMessage.Activity, userHiscores)
 			if err != nil {
 				return err
 			}
 
-			err = storage.RemoveMessage(activityMessage)
+			// Wait until the previous message in the sequence is posted
+			for !slices.Contains(positionsPosted, i-1) {
+				continue
+			}
+
+			// We remove the message every time instead of editing the existing message so we can guarantee
+			// that the order the skills are posted in matches the order the server admin configured
+			if activityMessage.MessageID != "" && server.ShouldEditMessage {
+				log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+				err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
+				if err != nil {
+					return err
+				}
+
+				err = storage.RemoveMessage(activityMessage)
+				if err != nil {
+					return err
+				}
+			}
+
+			log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+			newMessage, err := s.ChannelMessageSendEmbed(channel.ID, he)
 			if err != nil {
 				return err
 			}
-		}
 
-		log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
-		newMessage, err := s.ChannelMessageSendEmbed(channel.ID, hiscoreEmbeds)
-		if err != nil {
-			return err
-		}
+			positionsPosted = append(positionsPosted, i)
 
-		activityMessage.MessageID = newMessage.ID
+			activityMessage.MessageID = newMessage.ID
 
-		// Update our records to keep track of this message so we can edit it later
-		err = storage.EnrollMessage(server, activityMessage)
-		if err != nil {
-			return err
-		}
+			// Update our records to keep track of this message so we can edit it later
+			err = storage.EnrollMessage(server, activityMessage)
+			if err != nil {
+				return err
+			}
+
+			return nil
+
+		}()
 	}
+
+	wg.Wait()
 
 	return nil
 }
