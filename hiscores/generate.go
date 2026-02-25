@@ -54,16 +54,28 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores) 
 		return nil, err
 	}
 
+	if len(sortedUserHiscores.Rankings) == 0 {
+		return nil, nil
+	}
+
 	for _, rankedUser := range sortedUserHiscores.Rankings {
 
-		userField.Value = fmt.Sprintf(
-			"%s\n%d - <:%s> %s <@%s>",
-			userField.Value,
-			rankedUser.LocalRank,
-			types.ApplicationEmojis[rankedUser.User.OsrsAccountType].APIName(),
-			rankedUser.User.OsrsUsername,
-			rankedUser.User.DiscordUserID,
-		)
+		userField.Value = fmt.Sprintf("%s\n", userField.Value)
+
+		if len(sortedUserHiscores.Rankings) > 1 {
+			userField.Value += fmt.Sprintf(" %d -", rankedUser.LocalRank)
+		}
+
+		userField.Value += fmt.Sprintf(" %s", rankedUser.User.OsrsUsername)
+
+		accountTypeEmoji, ok := types.ApplicationEmojis[rankedUser.User.OsrsAccountType]
+		if ok {
+			userField.Value += fmt.Sprintf(" <:%s>", accountTypeEmoji.APIName())
+		}
+
+		if rankedUser.User.DiscordUserID != "" {
+			userField.Value += fmt.Sprintf(" <@%s>", rankedUser.User.DiscordUserID)
+		}
 
 		switch activityKind {
 		case "skill":
@@ -188,36 +200,42 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string) (*ty
 		return nil, err
 	}
 
+	// This isn't used for sorting but we just need some simple way
+	// to keep track if _any_ of the users are ranked to avoid an infinite loop later
+	rankLeader := -1
+
 	// Prefill the slices unsorted
 	for user, hs := range hiscores {
 		switch activityKind {
 		case "activity":
 			a := hs.GetActivity(activity)
-			if a.Rank > 0 {
-				sortedHiscores.Rankings = append(
-					sortedHiscores.Rankings,
-					types.RankedUser{
-						User:      user,
-						LocalRank: -1, // We will adjust this later once we've actually sorted
-						Rank:      a.Rank,
-						Score:     a.Score,
-					},
-				)
+			if a.Rank > rankLeader {
+				rankLeader = a.Rank
 			}
+			sortedHiscores.Rankings = append(
+				sortedHiscores.Rankings,
+				types.RankedUser{
+					User:      user,
+					LocalRank: -1, // We will adjust this later once we've actually sorted
+					Rank:      a.Rank,
+					Score:     a.Score,
+				},
+			)
 		case "skill":
 			s := hs.GetSkill(activity)
-			if s.Rank > 0 {
-				sortedHiscores.Rankings = append(
-					sortedHiscores.Rankings,
-					types.RankedUser{
-						User:      user,
-						LocalRank: -1, // We will adjust this later once we've actually sorted
-						Rank:      s.Rank,
-						Level:     s.Level,
-						XP:        s.XP,
-					},
-				)
+			if s.Rank > rankLeader {
+				rankLeader = s.Rank
 			}
+			sortedHiscores.Rankings = append(
+				sortedHiscores.Rankings,
+				types.RankedUser{
+					User:      user,
+					LocalRank: -1, // We will adjust this later once we've actually sorted
+					Rank:      s.Rank,
+					Level:     s.Level,
+					XP:        s.XP,
+				},
+			)
 		}
 	}
 
@@ -225,6 +243,12 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string) (*ty
 	sort.Slice(sortedHiscores.Rankings, func(i, j int) bool {
 		return sortedHiscores.Rankings[i].Rank < sortedHiscores.Rankings[j].Rank
 	})
+
+	// Move unranked bozos to the bottom of the board
+	for rankLeader > -1 && sortedHiscores.Rankings[0].Rank == -1 {
+		bozo := sortedHiscores.Rankings[0]
+		sortedHiscores.Rankings = append(sortedHiscores.Rankings[1:], bozo)
+	}
 
 	// Iterate through sorted list and assign local rankings based on order
 	for i := range sortedHiscores.Rankings {

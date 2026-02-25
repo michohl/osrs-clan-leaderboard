@@ -99,13 +99,15 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	osrsUser, err := storage.FetchUser(i.GuildID, hiscores.EncodeRSN(osrsUsername))
 	if err != nil {
-		log.Println(err)
-
-		discoveredErrors = fmt.Sprintf(
-			"%s\n* %s",
-			discoveredErrors,
-			fmt.Sprintf("Failed to find details of user '%s'. Make sure you have done /assign", osrsUsername),
-		)
+		log.Println("Failed to find user details. Attempting to make ad-hoc details")
+		osrsUser = model.Users{
+			OsrsUsernameKey: hiscores.EncodeRSN(osrsUsername),
+			OsrsUsername:    osrsUsername,
+			ServerID:        i.GuildID,
+			OsrsAccountType: "", // TODO: Determine at runtime account type
+			DiscordUsername: "",
+			DiscordUserID:   "",
+		}
 	}
 
 	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser})
@@ -131,7 +133,11 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			)
 		}
 
-		hiscoresEmbeds = append(hiscoresEmbeds, embeds)
+		if embeds != nil {
+			hiscoresEmbeds = append(hiscoresEmbeds, embeds)
+		} else {
+			log.Printf("Skipping skill/activity %s since none of the specified user(s) are ranked in it", activity)
+		}
 	}
 
 	if discoveredErrors != "" {
