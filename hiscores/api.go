@@ -11,7 +11,7 @@ import (
 )
 
 // HiscoreURLs are the endpoints we reach out to to get Hiscores from Jagex
-var HiscoreURLs map[string]string = map[string]string{
+var HiscoreURLs = map[string]string{
 	"ironman":          "https://secure.runescape.com/m=hiscore_oldschool_ironman/index_lite.json",
 	"hardcore_ironman": "https://secure.runescape.com/m=hiscore_oldschool_hardcore_ironman/index_lite.json",
 	"ultimate_ironman": "https://secure.runescape.com/m=hiscore_oldschool_ultimate/index_lite.json",
