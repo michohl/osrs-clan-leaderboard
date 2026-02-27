@@ -15,7 +15,7 @@ import (
 
 // FormatEmbeds takes an activity and user hiscores and formats that information into our final
 // set of embeds that we'll pass back to discord to present to the user in the message
-func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores) (*discordgo.MessageEmbed, error) {
+func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, removeUnrankedUsers bool) (*discordgo.MessageEmbed, error) {
 	activity = strings.Trim(activity, " ")
 	log.Printf("Generating fields for Activity/Skill %s\n", activity)
 
@@ -49,7 +49,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores) 
 		quantifierField.Name = "Level"
 	}
 
-	sortedUserHiscores, err := SortHiscores(userHiscores, activity)
+	sortedUserHiscores, err := SortHiscores(userHiscores, activity, removeUnrankedUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func IsActivityOrSkill(name string) (string, error) {
 
 // SortHiscores takes an array of hiscores for multiple
 // users and sorts them by rank for a specific activity
-func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string) (*types.RankedHiscores, error) {
+func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, removeUnrankedUsers bool) (*types.RankedHiscores, error) {
 
 	sortedHiscores := types.RankedHiscores{
 		Activity: activity,
@@ -244,10 +244,11 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string) (*ty
 		return sortedHiscores.Rankings[i].Rank < sortedHiscores.Rankings[j].Rank
 	})
 
-	// Move unranked bozos to the bottom of the board
-	for rankLeader > -1 && sortedHiscores.Rankings[0].Rank == -1 {
-		bozo := sortedHiscores.Rankings[0]
-		sortedHiscores.Rankings = append(sortedHiscores.Rankings[1:], bozo)
+	// Remove unranked bozos from the list
+	if removeUnrankedUsers {
+		for rankLeader > -1 && sortedHiscores.Rankings[0].Rank == -1 {
+			sortedHiscores.Rankings = sortedHiscores.Rankings[1:]
+		}
 	}
 
 	// Iterate through sorted list and assign local rankings based on order

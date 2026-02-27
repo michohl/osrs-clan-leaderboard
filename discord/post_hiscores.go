@@ -58,7 +58,7 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		go func() error {
 			defer wg.Done()
 			log.Printf("Generating Hiscores message for activity %s", activityMessage.Activity)
-			he, err := hiscores.FormatEmbeds(activityMessage.Activity, userHiscores)
+			he, err := hiscores.FormatEmbeds(activityMessage.Activity, userHiscores, true)
 			if err != nil {
 				return err
 			}
