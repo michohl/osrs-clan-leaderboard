@@ -87,7 +87,7 @@ func assignCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	osrsUsername := data[1].StringValue()
 	osrsAccountType := data[2].StringValue()
 
-	_, err := hiscores.GetPlayerHiscores(osrsUsername)
+	_, err := hiscores.GetPlayerHiscores(osrsUsername, "main")
 	if err != nil {
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,

@@ -33,6 +33,34 @@ var HiscoreCommandInfo = discordgo.ApplicationCommand{
 			Type:        discordgo.ApplicationCommandOptionString,
 			Required:    true,
 		},
+		{
+			Name:        "leaderboard",
+			Description: "Which leaderboard you want to check hiscores on",
+			Type:        discordgo.ApplicationCommandOptionString,
+			Required:    false,
+			Choices: []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "Use Default for Acccount Type",
+					Value: "",
+				},
+				{
+					Name:  "Main",
+					Value: "main",
+				},
+				{
+					Name:  "Ironman",
+					Value: "ironman",
+				},
+				{
+					Name:  "Ultimate Ironman",
+					Value: "ultimate_ironman",
+				},
+				{
+					Name:  "Hardcore Ironman",
+					Value: "hardcore_ironman",
+				},
+			},
+		},
 	},
 }
 
@@ -95,6 +123,16 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	osrsUsername := data[0].StringValue()
 	activities := strings.Split(data[1].StringValue(), ",")
 
+	accountType := ""
+	if len(data) > 2 {
+		accountType = data[2].StringValue()
+	}
+
+	if accountType == "" {
+		fmt.Println("No account type provided. Making a guess")
+		accountType = hiscores.GuessUserAccountType(osrsUsername)
+	}
+
 	discoveredErrors := ""
 
 	osrsUser, err := storage.FetchUser(i.GuildID, hiscores.EncodeRSN(osrsUsername))
@@ -104,13 +142,13 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			OsrsUsernameKey: hiscores.EncodeRSN(osrsUsername),
 			OsrsUsername:    osrsUsername,
 			ServerID:        i.GuildID,
-			OsrsAccountType: "", // TODO: Determine at runtime account type
+			OsrsAccountType: accountType,
 			DiscordUsername: "",
 			DiscordUserID:   "",
 		}
 	}
 
-	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser})
+	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser}, false)
 	if err != nil {
 		log.Println(err)
 
