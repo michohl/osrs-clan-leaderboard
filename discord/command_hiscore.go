@@ -124,7 +124,9 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	activities := strings.Split(data[1].StringValue(), ",")
 
 	accountType := ""
+	overrideLeaderboard := false
 	if len(data) > 2 {
+		overrideLeaderboard = true
 		accountType = data[2].StringValue()
 	}
 
@@ -146,6 +148,10 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			DiscordUsername: "",
 			DiscordUserID:   "",
 		}
+	}
+
+	if overrideLeaderboard {
+		osrsUser.OsrsAccountType = accountType
 	}
 
 	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser}, false)
