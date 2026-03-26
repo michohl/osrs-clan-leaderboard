@@ -40,7 +40,7 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
-	userHiscores, err := hiscores.GetUserHiscores(allUsers)
+	userHiscores, err := hiscores.GetUserHiscores(allUsers, true)
 	if err != nil {
 		return err
 	}

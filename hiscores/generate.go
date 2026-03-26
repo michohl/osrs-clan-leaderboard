@@ -121,7 +121,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 
 // GetUserHiscores takes a list of users and returns a map populated with all of the
 // hiscores for each user
-func GetUserHiscores(allUsers []model.Users) (map[model.Users]types.Hiscores, error) {
+func GetUserHiscores(allUsers []model.Users, forceNormalizedLeaderboard bool) (map[model.Users]types.Hiscores, error) {
 	var userHiscores map[model.Users]types.Hiscores = make(map[model.Users]types.Hiscores)
 
 	var wg sync.WaitGroup
@@ -131,8 +131,16 @@ func GetUserHiscores(allUsers []model.Users) (map[model.Users]types.Hiscores, er
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			log.Printf("Getting rank for user %s\n", user.OsrsUsername)
-			userHS, err := GetPlayerHiscores(user.OsrsUsernameKey)
+
+			var accountType string
+			if forceNormalizedLeaderboard {
+				accountType = "main"
+			} else {
+				accountType = user.OsrsAccountType
+			}
+
+			log.Printf("Getting rank for user %s on %s leaderboards\n", user.OsrsUsername, accountType)
+			userHS, err := GetPlayerHiscores(user.OsrsUsernameKey, accountType)
 			if err != nil {
 				// If a user changes their RSN we don't want to break the entire process.
 				// We'll just exclude them from the results.
