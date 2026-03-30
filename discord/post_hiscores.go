@@ -87,7 +87,7 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 			log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
 			err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
 			if err != nil {
-				return err
+				log.Printf("Error removing existing message: %s", err)
 			}
 
 			err = storage.RemoveMessage(activityMessage)
