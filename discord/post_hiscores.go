@@ -2,7 +2,6 @@ package discord
 
 import (
 	"log"
-	"slices"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -47,12 +46,15 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 
 	log.Printf("Generating %d Hiscores messages for server %s", len(messages), server.ServerName)
 
-	var wg sync.WaitGroup
-
 	// Keep track of each activity message that has been posted
 	// so we can prevent threads from skipping past each other
-	positionsPosted := []int{-1}
+	type preparedHiscoresMessage struct {
+		activityMessage model.Messages
+		embed           *discordgo.MessageEmbed
+	}
+	sortedEmbeds := map[int]preparedHiscoresMessage{}
 
+	var wg sync.WaitGroup
 	for i, activityMessage := range messages {
 		wg.Add(1)
 		go func() error {
@@ -63,48 +65,49 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 				return err
 			}
 
-			// Wait until the previous message in the sequence is posted
-			for !slices.Contains(positionsPosted, i-1) {
-				continue
-			}
-
-			// We remove the message every time instead of editing the existing message so we can guarantee
-			// that the order the skills are posted in matches the order the server admin configured
-			if activityMessage.MessageID != "" && server.ShouldEditMessage {
-				log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
-				err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
-				if err != nil {
-					return err
-				}
-
-				err = storage.RemoveMessage(activityMessage)
-				if err != nil {
-					return err
-				}
-			}
-
-			log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
-			newMessage, err := s.ChannelMessageSendEmbed(channel.ID, he)
-			if err != nil {
-				return err
-			}
-
-			positionsPosted = append(positionsPosted, i)
-
-			activityMessage.MessageID = newMessage.ID
-
-			// Update our records to keep track of this message so we can edit it later
-			err = storage.EnrollMessage(server, activityMessage)
-			if err != nil {
-				return err
-			}
+			sortedEmbeds[i] = preparedHiscoresMessage{activityMessage: activityMessage, embed: he}
 
 			return nil
-
 		}()
 	}
 
+	// Wait for all messages to be generated before posting
 	wg.Wait()
+
+	log.Println("All Hiscores are generated. Starting to post discord messages")
+
+	for _, preparedMessage := range sortedEmbeds {
+		activityMessage := preparedMessage.activityMessage
+		he := preparedMessage.embed
+		// We remove the message every time instead of editing the existing message so we can guarantee
+		// that the order the skills are posted in matches the order the server admin configured
+		if activityMessage.MessageID != "" && server.ShouldEditMessage {
+			log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+			err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
+			if err != nil {
+				return err
+			}
+
+			err = storage.RemoveMessage(activityMessage)
+			if err != nil {
+				return err
+			}
+		}
+
+		log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+		newMessage, err := s.ChannelMessageSendEmbed(channel.ID, he)
+		if err != nil {
+			return err
+		}
+
+		activityMessage.MessageID = newMessage.ID
+
+		// Update our records to keep track of this message so we can edit it later
+		err = storage.EnrollMessage(server, activityMessage)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
