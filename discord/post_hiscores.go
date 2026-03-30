@@ -2,6 +2,8 @@ package discord
 
 import (
 	"log"
+	"maps"
+	"slices"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -52,7 +54,7 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		activityMessage model.Messages
 		embed           *discordgo.MessageEmbed
 	}
-	sortedEmbeds := map[int]preparedHiscoresMessage{}
+	preparedEmbeds := map[int]preparedHiscoresMessage{}
 
 	var wg sync.WaitGroup
 	for i, activityMessage := range messages {
@@ -65,7 +67,7 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 				return err
 			}
 
-			sortedEmbeds[i] = preparedHiscoresMessage{activityMessage: activityMessage, embed: he}
+			preparedEmbeds[i] = preparedHiscoresMessage{activityMessage: activityMessage, embed: he}
 
 			return nil
 		}()
@@ -76,9 +78,9 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 
 	log.Println("All Hiscores are generated. Starting to post discord messages")
 
-	for _, preparedMessage := range sortedEmbeds {
-		activityMessage := preparedMessage.activityMessage
-		he := preparedMessage.embed
+	for _, key := range slices.Sorted(maps.Keys(preparedEmbeds)) {
+		activityMessage := preparedEmbeds[key].activityMessage
+		he := preparedEmbeds[key].embed
 		// We remove the message every time instead of editing the existing message so we can guarantee
 		// that the order the skills are posted in matches the order the server admin configured
 		if activityMessage.MessageID != "" && server.ShouldEditMessage {
