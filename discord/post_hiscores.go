@@ -89,11 +89,6 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 			if err != nil {
 				log.Printf("Error removing existing message: %s", err)
 			}
-
-			err = storage.RemoveMessage(activityMessage)
-			if err != nil {
-				return err
-			}
 		}
 
 		log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
