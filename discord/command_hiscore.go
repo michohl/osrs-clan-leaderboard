@@ -131,7 +131,7 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	if accountType == "" {
-		fmt.Println("No account type provided. Making a guess")
+		log.Println("No account type provided. Making a guess")
 		accountType = hiscores.GuessUserAccountType(osrsUsername)
 	}
 

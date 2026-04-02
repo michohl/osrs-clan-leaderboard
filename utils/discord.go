@@ -10,7 +10,6 @@ import (
 // attempt to use the cache and instead query discord for all the channels and return the one that matches
 // what the user asked for
 func GetChannel(s *discordgo.Session, guildID string, channelName string) (*discordgo.Channel, error) {
-	fmt.Println(guildID)
 	channels, err := s.GuildChannels(guildID)
 	if err != nil {
 		return nil, err

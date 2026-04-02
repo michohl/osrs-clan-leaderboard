@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"slices"
 	"strings"
@@ -42,8 +43,8 @@ func GetPlayerHiscores(username string, accountType string) (types.Hiscores, err
 
 	mode, ok := HiscoreModes[accountType]
 	if !ok {
-		fmt.Printf("Account Type '%s' does not have an associated Hiscores mode. Defaulting to Overall hiscores\n", accountType)
-		mode = "main"
+		log.Printf("Account Type '%s' does not have an associated Hiscores mode. Defaulting to Overall hiscores\n", accountType)
+		mode = HiscoreModes["main"]
 	}
 
 	resp, err := http.Get(
@@ -51,17 +52,27 @@ func GetPlayerHiscores(username string, accountType string) (types.Hiscores, err
 	)
 
 	if err != nil {
+		log.Printf(
+			"Unable to fetch hiscore for user %s (%s) on %s leaderboard\n%s\n",
+			username,
+			encodedUsername,
+			accountType,
+			err,
+		)
+
 		return types.Hiscores{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Println("Unable to read body from HTTP response")
 		return types.Hiscores{}, err
 	}
 
 	err = json.Unmarshal(body, &userHiscores)
 	if err != nil {
+		log.Println("Unable to unmarshal body as JSON")
 		return types.Hiscores{}, err
 	}
 
