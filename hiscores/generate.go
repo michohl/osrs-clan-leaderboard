@@ -133,11 +133,13 @@ func GetUserHiscores(allUsers []model.Users, forceNormalizedLeaderboard bool) (m
 		}
 
 		log.Printf("Getting rank for user %s on %s leaderboards\n", user.OsrsUsername, accountType)
+		userHS, err := GetPlayerHiscores(user.OsrsUsernameKey, accountType)
+
 		// If a user changes their RSN we don't want to break the entire process.
 		// We'll just exclude them from the results.
-		userHS, _ := GetPlayerHiscores(user.OsrsUsernameKey, accountType)
-
-		userHiscores[user] = userHS
+		if err == nil {
+			userHiscores[user] = userHS
+		}
 	}
 	return userHiscores, nil
 }
