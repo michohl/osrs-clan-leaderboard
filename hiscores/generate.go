@@ -263,6 +263,9 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 	if removeUnrankedUsers {
 		// Get the last place user
 		lastUserIndex := len(sortedHiscores.Rankings) - 1
+		if lastUserIndex == -1 {
+			return &sortedHiscores, nil
+		}
 		lastUser := sortedHiscores.Rankings[lastUserIndex]
 
 		// Keep removing the last place user until the last place user
