@@ -240,25 +240,29 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 		switch activityKind {
 		case "activity":
 			a := hs.GetActivity(activity)
+
 			userRanking.Rank = a.Rank
 			userRanking.Score = a.Score
+
 			// For some reason some users who haven't done content have a score of
 			// -1 while others have a score of 0 so we're just going to normalize
 			// that and pretend we didn't see that weirdness
 			if userRanking.Score == -1 {
 				userRanking.Score = 0
 			}
-			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		case "skill":
 			s := hs.GetSkill(activity)
+
 			userRanking.Rank = s.Rank
 			userRanking.Level = s.Level
+			userRanking.XP = s.XP
+
 			if userRanking.Level == -1 {
 				userRanking.Level = 1
 			}
-			userRanking.XP = s.XP
-			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		}
+
+		sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 	}
 
 	// Sort our rankings based on Score or Level
