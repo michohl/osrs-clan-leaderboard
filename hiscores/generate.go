@@ -23,7 +23,7 @@ func getEmbedSize(embed *discordgo.MessageEmbed) int {
 
 // FormatEmbeds takes an activity and user hiscores and formats that information into our final
 // set of embeds that we'll pass back to discord to present to the user in the message
-func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, removeUnrankedUsers bool) ([]*discordgo.MessageEmbed, error) {
+func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, removeUnrankedUsers bool, removeRank bool) ([]*discordgo.MessageEmbed, error) {
 
 	emojiName := types.NormalizeEmojiName(activity)
 
@@ -56,6 +56,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Username", Value: "", Inline: true},       // User field
 				{Name: quantifierHeader, Value: "", Inline: true}, // Quantifier field
+				{Name: "Rank", Value: "", Inline: true},           // Rank field
 			},
 		},
 	}
@@ -65,6 +66,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 
 	userField := currentEmbed.Fields[0]
 	quantifierField := currentEmbed.Fields[1]
+	rankField := currentEmbed.Fields[2]
 
 	sortedUserHiscores, err := SortHiscores(userHiscores, activity, removeUnrankedUsers)
 	if err != nil {
@@ -85,6 +87,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 				Fields: []*discordgo.MessageEmbedField{
 					{Name: "Username", Value: "", Inline: true},       // User field
 					{Name: quantifierHeader, Value: "", Inline: true}, // Quantifier field
+					{Name: "Rank", Value: "", Inline: true},           // Rank field
 				},
 			},
 			)
@@ -94,6 +97,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 
 			userField = currentEmbed.Fields[0]
 			quantifierField = currentEmbed.Fields[1]
+			rankField = currentEmbed.Fields[2]
 		}
 
 		userField.Value = fmt.Sprintf("%s\n", userField.Value)
@@ -126,6 +130,18 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 				quantifierField.Value,
 				rankedUser.Score,
 			)
+		}
+
+		rankField.Value = fmt.Sprintf(
+			"%s\n%d",
+			rankField.Value,
+			rankedUser.Rank,
+		)
+	}
+
+	if removeRank {
+		for _, embed := range messageEmbeds {
+			embed.Fields = embed.Fields[:2]
 		}
 	}
 

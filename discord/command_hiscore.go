@@ -168,7 +168,7 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	hiscoresEmbeds := []*discordgo.MessageEmbed{}
 
 	for _, activity := range activities {
-		embeds, err := hiscores.FormatEmbeds(activity, userHiscores, false)
+		embeds, err := hiscores.FormatEmbeds(activity, userHiscores, false, false)
 		if err != nil {
 			discoveredErrors = fmt.Sprintf(
 				"%s\n* %s",
