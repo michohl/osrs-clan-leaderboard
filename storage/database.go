@@ -112,7 +112,7 @@ func EnrollServer(server model.Servers, activities string) error {
 		currentPosition, err := FetchActivityPosition(server.ID, activity)
 
 		// If we can't find a message or if the position changed create/update the message row
-		if err != nil || int32(position) != currentPosition {
+		if err != nil || currentPosition == -1 || int32(position) != currentPosition {
 			err = EnrollMessage(server, model.Messages{
 				MessageID: "",
 				ServerID:  server.ID,
@@ -317,8 +317,11 @@ func FetchActivityPosition(serverID string, activity string) (int32, error) {
 		return -1, err
 	}
 
-	return m[0], nil
-
+	if len(m) > 0 {
+		return m[0], nil
+	} else {
+		return -1, nil
+	}
 }
 
 // FetchAllMessages takes a Guild ID and returns the relevant
