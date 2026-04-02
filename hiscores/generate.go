@@ -194,10 +194,6 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 		return nil, err
 	}
 
-	// This isn't used for sorting but we just need some simple way
-	// to keep track if _any_ of the users are ranked to avoid an infinite loop later
-	leader := -1
-
 	// Prefill the slices unsorted
 	for user, hs := range hiscores {
 		userRanking := types.RankedUser{
@@ -212,17 +208,11 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 		switch activityKind {
 		case "activity":
 			a := hs.GetActivity(activity)
-			if a.Score > leader {
-				leader = a.Score
-			}
 			userRanking.Rank = a.Rank
 			userRanking.Score = a.Score
 			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		case "skill":
 			s := hs.GetSkill(activity)
-			if s.Level > leader {
-				leader = s.Level
-			}
 			userRanking.Rank = s.Rank
 			userRanking.Level = s.Level
 			userRanking.XP = s.XP
@@ -246,15 +236,28 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 
 	// Remove bozos that have never done the content from the list
 	if removeUnrankedUsers {
-		lastUser := len(sortedHiscores.Rankings) - 1
-		for leader > 0 && (sortedHiscores.Rankings[lastUser].Score == 0 || sortedHiscores.Rankings[lastUser].Level == 1) {
+		// Get the last place user
+		lastUserIndex := len(sortedHiscores.Rankings) - 1
+		lastUser := sortedHiscores.Rankings[lastUserIndex]
+
+		// Keep removing the last place user until the last place user
+		// has done the content enough that's worth representing
+		for lastUser.Score == 0 || lastUser.Level == 1 {
 			log.Printf(
 				"Removing user %s because they have have not done %s\n",
-				sortedHiscores.Rankings[lastUser].User.OsrsUsername,
+				lastUser.User.OsrsUsername,
 				activity,
 			)
-			sortedHiscores.Rankings = sortedHiscores.Rankings[:lastUser]
-			lastUser = len(sortedHiscores.Rankings) - 1
+			sortedHiscores.Rankings = sortedHiscores.Rankings[:lastUserIndex]
+
+			// Refresh who the last place user is
+			lastUserIndex = len(sortedHiscores.Rankings) - 1
+			if lastUserIndex == -1 {
+				log.Printf("All users have been filtered out for %s %s", activityKind, activity)
+				return &sortedHiscores, nil
+			}
+
+			lastUser = sortedHiscores.Rankings[lastUserIndex]
 		}
 	}
 

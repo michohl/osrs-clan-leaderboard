@@ -67,7 +67,11 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 				return err
 			}
 
-			preparedEmbeds[i] = preparedHiscoresMessage{activityMessage: activityMessage, embed: he}
+			// If we filter out all of the users from an embed because every user has
+			// zero score or level 1 then we can just throw the whole message away
+			if he != nil {
+				preparedEmbeds[i] = preparedHiscoresMessage{activityMessage: activityMessage, embed: he}
+			}
 
 			return nil
 		}()
