@@ -35,12 +35,6 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 		Inline: true,
 	}
 
-	rankField := discordgo.MessageEmbedField{
-		Name:   "Rank",
-		Value:  "",
-		Inline: true,
-	}
-
 	switch activityKind {
 	case "activity":
 		quantifierField.Name = "Score"
@@ -90,13 +84,6 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 				rankedUser.Score,
 			)
 		}
-
-		rankField.Value = fmt.Sprintf(
-			"%s\n%d",
-			rankField.Value,
-			rankedUser.Rank,
-		)
-
 	}
 
 	emojiName := types.NormalizeEmojiName(activity)
@@ -113,7 +100,6 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 		Fields: []*discordgo.MessageEmbedField{
 			&userField,
 			&quantifierField,
-			&rankField,
 		},
 	}, nil
 }
