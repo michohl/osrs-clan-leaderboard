@@ -41,6 +41,11 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
+	allActivitiesAndSkills, err := storage.FetchAllActivitiesAndSkills(server.ID)
+	if err != nil {
+		return err
+	}
+
 	userHiscores, err := hiscores.GetUserHiscores(allUsers, false)
 	if err != nil {
 		return err
@@ -51,26 +56,30 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 	// Keep track of each activity message that has been posted
 	// so we can prevent threads from skipping past each other
 	type preparedHiscoresMessage struct {
-		activityMessage model.Messages
-		embed           *discordgo.MessageEmbed
+		activity string
+		embed    *discordgo.MessageEmbed
 	}
-	preparedEmbeds := map[int]preparedHiscoresMessage{}
+	preparedEmbeds := map[int][]preparedHiscoresMessage{}
 
 	var wg sync.WaitGroup
-	for i, activityMessage := range messages {
+	for i, aos := range allActivitiesAndSkills {
 		wg.Add(1)
 		go func() error {
 			defer wg.Done()
-			log.Printf("Generating Hiscores message for activity %s", activityMessage.Activity)
-			he, err := hiscores.FormatEmbeds(activityMessage.Activity, userHiscores, true)
+			log.Printf("Generating Hiscores message for activity %s", aos)
+			messageEmbeds, err := hiscores.FormatEmbeds(aos, userHiscores, true)
 			if err != nil {
 				return err
 			}
 
-			// If we filter out all of the users from an embed because every user has
-			// zero score or level 1 then we can just throw the whole message away
-			if he != nil {
-				preparedEmbeds[i] = preparedHiscoresMessage{activityMessage: activityMessage, embed: he}
+			log.Printf("Generated embeds for %s: %d\n", aos, len(messageEmbeds))
+
+			for _, messageEmbed := range messageEmbeds {
+				// If we filter out all of the users from an embed because every user has
+				// zero score or level 1 then we can just throw the whole message away
+				if messageEmbed != nil {
+					preparedEmbeds[i] = append(preparedEmbeds[i], preparedHiscoresMessage{activity: aos, embed: messageEmbed})
+				}
 			}
 
 			return nil
@@ -83,30 +92,54 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 	log.Println("All Hiscores are generated. Starting to post discord messages")
 
 	for _, key := range slices.Sorted(maps.Keys(preparedEmbeds)) {
-		activityMessage := preparedEmbeds[key].activityMessage
-		he := preparedEmbeds[key].embed
-		// We remove the message every time instead of editing the existing message so we can guarantee
-		// that the order the skills are posted in matches the order the server admin configured
-		if activityMessage.MessageID != "" && server.ShouldEditMessage {
-			log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
-			err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
-			if err != nil {
-				log.Printf("Error removing existing message: %s", err)
+
+		if len(preparedEmbeds[key]) < 1 {
+			continue
+		}
+
+		activityMessages, err := storage.FetchMessage(serverID, preparedEmbeds[key][0].activity)
+		if err != nil {
+			return err
+		}
+
+		for _, activityMessage := range activityMessages {
+			// We remove the message every time instead of editing the existing message so we can guarantee
+			// that the order the skills are posted in matches the order the server admin configured
+			if activityMessage.MessageID != "" && server.ShouldEditMessage {
+				log.Printf("Removing existing hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
+				err := s.ChannelMessageDelete(channel.ID, activityMessage.MessageID)
+				if err != nil {
+					log.Printf("Error removing existing message: %s", err)
+				}
 			}
 		}
 
-		log.Printf("Posting new scheduled hiscores message for %s in server %s\n", activityMessage.Activity, server.ServerName)
-		newMessage, err := s.ChannelMessageSendEmbed(channel.ID, he)
-		if err != nil {
-			return err
-		}
+		for _, embed := range preparedEmbeds[key] {
+			he := embed.embed
 
-		activityMessage.MessageID = newMessage.ID
+			log.Printf("Posting new scheduled hiscores message for %s in server %s\n", embed.activity, server.ServerName)
+			newMessage, err := s.ChannelMessageSendEmbed(channel.ID, he)
+			if err != nil {
+				return err
+			}
 
-		// Update our records to keep track of this message so we can edit it later
-		err = storage.EnrollMessage(server, activityMessage)
-		if err != nil {
-			return err
+			position, err := storage.FetchActivityPosition(serverID, embed.activity)
+			if err != nil {
+				return err
+			}
+
+			activityMessage := model.Messages{
+				MessageID: newMessage.ID,
+				ServerID:  serverID,
+				Activity:  embed.activity,
+				Position:  position,
+			}
+
+			// Update our records to keep track of this message so we can edit it later
+			err = storage.EnrollMessage(server, activityMessage)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

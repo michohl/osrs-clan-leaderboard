@@ -12,9 +12,28 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
+func getEmbedSize(embed *discordgo.MessageEmbed) int {
+	size := 0
+	for _, f := range embed.Fields {
+		size += len(f.Value)
+	}
+
+	return size
+}
+
 // FormatEmbeds takes an activity and user hiscores and formats that information into our final
 // set of embeds that we'll pass back to discord to present to the user in the message
-func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, removeUnrankedUsers bool) (*discordgo.MessageEmbed, error) {
+func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, removeUnrankedUsers bool) ([]*discordgo.MessageEmbed, error) {
+
+	emojiName := types.NormalizeEmojiName(activity)
+
+	activityEmoji, ok := types.ApplicationEmojis[emojiName]
+	if !ok {
+		activityEmoji = types.ApplicationEmojis["osrstrophy"]
+	}
+
+	emoji := fmt.Sprintf("<:%s>", activityEmoji.APIName())
+
 	activity = strings.Trim(activity, " ")
 	log.Printf("Generating fields for Activity/Skill %s\n", activity)
 
@@ -23,24 +42,29 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 		return nil, err
 	}
 
-	userField := discordgo.MessageEmbedField{
-		Name:   "Username",
-		Value:  "",
-		Inline: true,
-	}
-
-	quantifierField := discordgo.MessageEmbedField{
-		Name:   "",
-		Value:  "",
-		Inline: true,
-	}
-
+	var quantifierHeader string
 	switch activityKind {
 	case "activity":
-		quantifierField.Name = "Score"
+		quantifierHeader = "Score"
 	case "skill":
-		quantifierField.Name = "Level"
+		quantifierHeader = "Level"
 	}
+
+	messageEmbeds := []*discordgo.MessageEmbed{
+		{
+			Title: fmt.Sprintf("%s %s", emoji, activity),
+			Fields: []*discordgo.MessageEmbedField{
+				{Name: "Username", Value: "", Inline: true},       // User field
+				{Name: quantifierHeader, Value: "", Inline: true}, // Quantifier field
+			},
+		},
+	}
+
+	currentEmbedIndex := len(messageEmbeds) - 1
+	currentEmbed := messageEmbeds[currentEmbedIndex]
+
+	userField := currentEmbed.Fields[0]
+	quantifierField := currentEmbed.Fields[1]
 
 	sortedUserHiscores, err := SortHiscores(userHiscores, activity, removeUnrankedUsers)
 	if err != nil {
@@ -52,6 +76,25 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 	}
 
 	for _, rankedUser := range sortedUserHiscores.Rankings {
+
+		// If we get close to the character limit (1024) then we should split
+		// the embed into multiple messages
+		if getEmbedSize(currentEmbed) > 850 {
+			messageEmbeds = append(messageEmbeds, &discordgo.MessageEmbed{
+				Title: fmt.Sprintf("%s %s", emoji, activity),
+				Fields: []*discordgo.MessageEmbedField{
+					{Name: "Username", Value: "", Inline: true},       // User field
+					{Name: quantifierHeader, Value: "", Inline: true}, // Quantifier field
+				},
+			},
+			)
+
+			currentEmbedIndex = len(messageEmbeds) - 1
+			currentEmbed = messageEmbeds[currentEmbedIndex]
+
+			userField = currentEmbed.Fields[0]
+			quantifierField = currentEmbed.Fields[1]
+		}
 
 		userField.Value = fmt.Sprintf("%s\n", userField.Value)
 
@@ -86,22 +129,7 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 		}
 	}
 
-	emojiName := types.NormalizeEmojiName(activity)
-
-	activityEmoji, ok := types.ApplicationEmojis[emojiName]
-	if !ok {
-		activityEmoji = types.ApplicationEmojis["osrstrophy"]
-	}
-
-	emoji := fmt.Sprintf("<:%s>", activityEmoji.APIName())
-
-	return &discordgo.MessageEmbed{
-		Title: fmt.Sprintf("%s %s", emoji, activity),
-		Fields: []*discordgo.MessageEmbedField{
-			&userField,
-			&quantifierField,
-		},
-	}, nil
+	return messageEmbeds, nil
 }
 
 // GetUserHiscores takes a list of users and returns a map populated with all of the
@@ -198,11 +226,20 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 			a := hs.GetActivity(activity)
 			userRanking.Rank = a.Rank
 			userRanking.Score = a.Score
+			// For some reason some users who haven't done content have a score of
+			// -1 while others have a score of 0 so we're just going to normalize
+			// that and pretend we didn't see that weirdness
+			if userRanking.Score == -1 {
+				userRanking.Score = 0
+			}
 			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		case "skill":
 			s := hs.GetSkill(activity)
 			userRanking.Rank = s.Rank
 			userRanking.Level = s.Level
+			if userRanking.Level == -1 {
+				userRanking.Level = 1
+			}
 			userRanking.XP = s.XP
 			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		}

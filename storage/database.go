@@ -109,10 +109,10 @@ func EnrollServer(server model.Servers, activities string) error {
 
 	for position, activity := range newActivities {
 
-		m, messageErr := FetchMessage(server.ID, activity)
+		currentPosition, err := FetchActivityPosition(server.ID, activity)
 
 		// If we can't find a message or if the position changed create/update the message row
-		if messageErr != nil || int32(position) != m.Position {
+		if err != nil || int32(position) != currentPosition {
 			err = EnrollMessage(server, model.Messages{
 				MessageID: "",
 				ServerID:  server.ID,
@@ -271,6 +271,56 @@ func FetchUser(serverID string, osrsUsername string) (model.Users, error) {
 	return u, nil
 }
 
+// FetchAllActivitiesAndSkills takes a Guild ID and returns all the unique
+func FetchAllActivitiesAndSkills(serverID string) ([]string, error) {
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return []string{}, err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Messages.
+		SELECT(table.Messages.Activity).
+		DISTINCT().
+		WHERE(table.Messages.ServerID.EQ(sqlite.String(serverID))).
+		ORDER_BY(table.Messages.Position)
+
+	var m []string
+	err = sqlStmt.Query(db, &m)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return m, nil
+
+}
+
+// FetchActivityPosition takes a Guild ID and returns all the unique
+func FetchActivityPosition(serverID string, activity string) (int32, error) {
+	db, err := sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		return -1, err
+	}
+	defer db.Close()
+
+	sqlStmt := table.Messages.
+		SELECT(table.Messages.Position).
+		DISTINCT().
+		WHERE(table.Messages.ServerID.
+			EQ(sqlite.String(serverID)).
+			AND(table.Messages.Activity.EQ(sqlite.String(activity))),
+		)
+
+	var m []int32
+	err = sqlStmt.Query(db, &m)
+	if err != nil {
+		return -1, err
+	}
+
+	return m[0], nil
+
+}
+
 // FetchAllMessages takes a Guild ID and returns the relevant
 // rows from our database that match the Guid ID
 func FetchAllMessages(serverID string) ([]model.Messages, error) {
@@ -297,11 +347,11 @@ func FetchAllMessages(serverID string) ([]model.Messages, error) {
 
 // FetchMessage takes a Guild ID and returns the relevant
 // row from our database that matches the specified activity
-func FetchMessage(serverID, activity string) (model.Messages, error) {
+func FetchMessage(serverID, activity string) ([]model.Messages, error) {
 
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
-		return model.Messages{}, err
+		return []model.Messages{}, err
 	}
 	defer db.Close()
 
@@ -312,10 +362,10 @@ func FetchMessage(serverID, activity string) (model.Messages, error) {
 			AND(table.Messages.Activity.EQ(sqlite.String(activity))),
 		)
 
-	var m model.Messages
+	var m []model.Messages
 	err = sqlStmt.Query(db, &m)
 	if err != nil {
-		return model.Messages{}, err
+		return []model.Messages{}, err
 	}
 
 	return m, nil

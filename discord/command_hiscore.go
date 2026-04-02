@@ -178,7 +178,7 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 
 		if embeds != nil {
-			hiscoresEmbeds = append(hiscoresEmbeds, embeds)
+			hiscoresEmbeds = append(hiscoresEmbeds, embeds...)
 		} else {
 			log.Printf("Skipping skill/activity %s since none of the specified user(s) are ranked in it", activity)
 		}
