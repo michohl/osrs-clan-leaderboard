@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/avast/retry-go/v5"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 )
 
@@ -32,11 +34,7 @@ func EncodeRSN(username string) string {
 	return strings.ToLower(strings.ReplaceAll(username, " ", "_"))
 }
 
-// GetPlayerHiscores makes a call to the Jagex provided
-// API endpoint that returns the hiscores for one specific user.
-// Documentation: https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores
-func GetPlayerHiscores(username string, accountType string) (types.Hiscores, error) {
-
+func queryAPI(username string, accountType string) (types.Hiscores, error) {
 	encodedUsername := EncodeRSN(username)
 
 	var userHiscores types.Hiscores
@@ -72,11 +70,33 @@ func GetPlayerHiscores(username string, accountType string) (types.Hiscores, err
 
 	err = json.Unmarshal(body, &userHiscores)
 	if err != nil {
-		log.Println("Unable to unmarshal body as JSON")
-		return types.Hiscores{}, err
+		log.Printf("Unable to unmarshal body as JSON: %s\n", err)
+		return types.Hiscores{}, fmt.Errorf("No valid hiscores returned for user %s on %s leaderboard", username, accountType)
 	}
 
 	return userHiscores, nil
+
+}
+
+// GetPlayerHiscores makes a call to the Jagex provided
+// API endpoint that returns the hiscores for one specific user.
+// Documentation: https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores
+func GetPlayerHiscores(username string, accountType string) (types.Hiscores, error) {
+	hiscores, err := retry.NewWithData[types.Hiscores](retry.Attempts(5), retry.Delay(100*time.Millisecond)).Do(
+		func() (types.Hiscores, error) {
+			hiscores, err := queryAPI(username, accountType)
+			if err != nil {
+				return types.Hiscores{}, err
+			}
+			return hiscores, nil
+		},
+	)
+
+	if err != nil {
+		return types.Hiscores{}, err
+	}
+
+	return hiscores, nil
 }
 
 // GetAllSkills will return all the valid skill options that the API
