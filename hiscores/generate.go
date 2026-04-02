@@ -210,52 +210,65 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 
 	// This isn't used for sorting but we just need some simple way
 	// to keep track if _any_ of the users are ranked to avoid an infinite loop later
-	rankLeader := -1
+	leader := -1
 
 	// Prefill the slices unsorted
 	for user, hs := range hiscores {
+		userRanking := types.RankedUser{
+			User:      user,
+			LocalRank: -1, // We will adjust this later once we've actually sorted
+			Rank:      -1,
+			Score:     -1,
+			Level:     -1,
+			XP:        -1,
+		}
+
 		switch activityKind {
 		case "activity":
 			a := hs.GetActivity(activity)
-			if a.Rank > rankLeader {
-				rankLeader = a.Rank
+			if a.Score > leader {
+				leader = a.Score
 			}
-			sortedHiscores.Rankings = append(
-				sortedHiscores.Rankings,
-				types.RankedUser{
-					User:      user,
-					LocalRank: -1, // We will adjust this later once we've actually sorted
-					Rank:      a.Rank,
-					Score:     a.Score,
-				},
-			)
+			userRanking.Rank = a.Rank
+			userRanking.Score = a.Score
+			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		case "skill":
 			s := hs.GetSkill(activity)
-			if s.Rank > rankLeader {
-				rankLeader = s.Rank
+			if s.Level > leader {
+				leader = s.Level
 			}
-			sortedHiscores.Rankings = append(
-				sortedHiscores.Rankings,
-				types.RankedUser{
-					User:      user,
-					LocalRank: -1, // We will adjust this later once we've actually sorted
-					Rank:      s.Rank,
-					Level:     s.Level,
-					XP:        s.XP,
-				},
-			)
+			userRanking.Rank = s.Rank
+			userRanking.Level = s.Level
+			userRanking.XP = s.XP
+			sortedHiscores.Rankings = append(sortedHiscores.Rankings, userRanking)
 		}
 	}
 
-	// Sort our rankings based on the offical rank
+	// Sort our rankings based on Score or Level
 	sort.Slice(sortedHiscores.Rankings, func(i, j int) bool {
-		return sortedHiscores.Rankings[i].Rank < sortedHiscores.Rankings[j].Rank
+		switch activityKind {
+		case "activity":
+			return sortedHiscores.Rankings[i].Score > sortedHiscores.Rankings[j].Score
+		case "skill":
+			return sortedHiscores.Rankings[i].Level > sortedHiscores.Rankings[j].Level
+		// This switch covers all actual possible values including a default
+		// case is necessary to make the compiler happy
+		default:
+			return false
+		}
 	})
 
-	// Remove unranked bozos from the list
+	// Remove bozos that have never done the content from the list
 	if removeUnrankedUsers {
-		for rankLeader > -1 && sortedHiscores.Rankings[0].Rank == -1 {
-			sortedHiscores.Rankings = sortedHiscores.Rankings[1:]
+		lastUser := len(sortedHiscores.Rankings) - 1
+		for leader > 0 && (sortedHiscores.Rankings[lastUser].Score == 0 || sortedHiscores.Rankings[lastUser].Level == 1) {
+			log.Printf(
+				"Removing user %s because they have have not done %s\n",
+				sortedHiscores.Rankings[lastUser].User.OsrsUsername,
+				activity,
+			)
+			sortedHiscores.Rankings = sortedHiscores.Rankings[:lastUser]
+			lastUser = len(sortedHiscores.Rankings) - 1
 		}
 	}
 
