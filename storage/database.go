@@ -50,7 +50,7 @@ func init() {
 		server_id         TEXT    NOT NULL DEFAULT "",
 		activity          TEXT    NOT NULL DEFAULT "",
 		position          INTEGER NOT NULL DEFAULT 0,
-		PRIMARY KEY (server_id, activity)
+		PRIMARY KEY (message_id, server_id, activity)
 	);
     `
 	_, err = db.Exec(sqlStmt)
@@ -388,7 +388,7 @@ func EnrollMessage(server model.Servers, message model.Messages) error {
 	sqlStmt := table.Messages.
 		INSERT(table.Messages.AllColumns).
 		MODEL(message).
-		ON_CONFLICT(table.Messages.ServerID, table.Messages.Activity).
+		ON_CONFLICT(table.Messages.MessageID, table.Messages.ServerID, table.Messages.Activity).
 		DO_UPDATE(
 			sqlite.SET(
 				table.Messages.MessageID.SET(sqlite.String(message.MessageID)),

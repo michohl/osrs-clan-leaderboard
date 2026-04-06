@@ -67,7 +67,7 @@ func newMessagesTableImpl(schemaName, tableName, alias string) messagesTable {
 		ActivityColumn  = sqlite.StringColumn("activity")
 		PositionColumn  = sqlite.IntegerColumn("position")
 		allColumns      = sqlite.ColumnList{MessageIDColumn, ServerIDColumn, ActivityColumn, PositionColumn}
-		mutableColumns  = sqlite.ColumnList{MessageIDColumn, PositionColumn}
+		mutableColumns  = sqlite.ColumnList{PositionColumn}
 		defaultColumns  = sqlite.ColumnList{MessageIDColumn, ServerIDColumn, ActivityColumn, PositionColumn}
 	)
 

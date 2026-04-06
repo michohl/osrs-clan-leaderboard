@@ -53,14 +53,9 @@ func configureCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Printf("Unable to fetch an existing config for guild %s. Error: %s", i.GuildID, err)
 	}
 
-	existingMessages, err := storage.FetchAllMessages(i.GuildID)
+	existingActivities, err := storage.FetchAllActivitiesAndSkills(i.GuildID)
 	if err != nil {
 		log.Printf("Unable to fetch existing tracked activities for guild %s. Error: %s", i.GuildID, err)
-	}
-
-	existingActivities := []string{}
-	for _, m := range existingMessages {
-		existingActivities = append(existingActivities, m.Activity)
 	}
 
 	defaultChannel := []discordgo.SelectMenuDefaultValue{}

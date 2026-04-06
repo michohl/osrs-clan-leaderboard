@@ -111,6 +111,11 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 				if err != nil {
 					log.Printf("Error removing existing message: %s", err)
 				}
+
+				err = storage.RemoveMessage(activityMessage)
+				if err != nil {
+					log.Printf("Error removing deleted message from db: %s", err)
+				}
 			}
 		}
 
