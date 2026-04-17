@@ -4,6 +4,7 @@ import (
 	"log"
 	"maps"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -46,9 +47,21 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
-	userHiscores, err := hiscores.GetUserHiscores(allUsers, false)
+	userHiscores, err := hiscores.GetUserHiscores(allUsers, "")
 	if err != nil {
 		return err
+	}
+
+	userSeasonalHiscores := map[model.Users]types.Hiscores{}
+	for _, aos := range allActivitiesAndSkills {
+		if hiscores.IsSeasonal(aos) || slices.Contains(types.SEASONAL_ACTIVITIES, strings.ToLower(aos)) {
+			log.Println("At least one seasonal activity/skill detected so generating list of seasonal hiscores now...")
+			userSeasonalHiscores, err = hiscores.GetUserHiscores(allUsers, "seasonal")
+			if err != nil {
+				return err
+			}
+			break
+		}
 	}
 
 	log.Printf("Generating %d Hiscores messages for server %s", len(messages), server.ServerName)
@@ -67,7 +80,27 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		go func() error {
 			defer wg.Done()
 			log.Printf("Generating Hiscores message for activity %s", aos)
-			messageEmbeds, err := hiscores.FormatEmbeds(aos, userHiscores, true, true)
+			var messageEmbeds []*discordgo.MessageEmbed
+
+			if hiscores.IsSeasonal(aos) && strings.LastIndex(aos, "(") != -1 {
+
+			}
+
+			var hs map[model.Users]types.Hiscores
+
+			if hiscores.IsSeasonal(aos) {
+				if strings.LastIndex(aos, "(") != -1 {
+					aos = aos[:strings.LastIndex(aos, "(")]
+				}
+				hs = userSeasonalHiscores
+			} else if slices.Contains(types.SEASONAL_ACTIVITIES, strings.ToLower(aos)) {
+				hs = userSeasonalHiscores
+			} else {
+				hs = userHiscores
+			}
+
+			messageEmbeds, err = hiscores.FormatEmbeds(aos, hs, true, true)
+
 			if err != nil {
 				return err
 			}

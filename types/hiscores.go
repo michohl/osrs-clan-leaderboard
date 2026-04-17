@@ -6,6 +6,11 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 )
 
+var (
+	// Activities that will always need to use the seasonal leaderboard
+	SEASONAL_ACTIVITIES = []string{"league points", "deadman points"}
+)
+
 // Hiscores is the struct we will unmarshall our response from the API into
 type Hiscores struct {
 	Name       string            `json:"name"`

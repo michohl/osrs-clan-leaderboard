@@ -3,6 +3,7 @@ package hiscores
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 
@@ -21,18 +22,41 @@ func getEmbedSize(embed *discordgo.MessageEmbed) int {
 	return size
 }
 
+func IsSeasonal(activity string) bool {
+	seasonalMarkers := []string{"league", "leagues", "deadman", "deadman mode"}
+	for _, sm := range seasonalMarkers {
+		suffix := fmt.Sprintf("(%s)", sm)
+		if strings.HasSuffix(strings.ToLower(activity), suffix) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // FormatEmbeds takes an activity and user hiscores and formats that information into our final
 // set of embeds that we'll pass back to discord to present to the user in the message
 func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, removeUnrankedUsers bool, removeRank bool) ([]*discordgo.MessageEmbed, error) {
+	isSeasonalUsers := true
+	for user := range userHiscores {
+		if user.OsrsAccountType != "seasonal" {
+			isSeasonalUsers = false
+			break
+		}
+	}
 
 	emojiName := types.NormalizeEmojiName(activity)
-
 	activityEmoji, ok := types.ApplicationEmojis[emojiName]
 	if !ok {
 		activityEmoji = types.ApplicationEmojis["osrstrophy"]
 	}
 
 	emoji := fmt.Sprintf("<:%s>", activityEmoji.APIName())
+
+	if isSeasonalUsers && !slices.Contains(types.SEASONAL_ACTIVITIES, strings.ToLower(activity)) {
+		seasonalEmoji := types.ApplicationEmojis["league_points"]
+		emoji += fmt.Sprintf(" <:%s>", seasonalEmoji.APIName())
+	}
 
 	activity = strings.Trim(activity, " ")
 	log.Printf("Generating fields for Activity/Skill %s\n", activity)
@@ -68,7 +92,13 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 	quantifierField := currentEmbed.Fields[1]
 	rankField := currentEmbed.Fields[2]
 
-	sortedUserHiscores, err := SortHiscores(userHiscores, activity, removeUnrankedUsers)
+	var cleanActivity string
+	if IsSeasonal(activity) && strings.LastIndex(activity, "(") > -1 {
+		cleanActivity = activity[:strings.LastIndex(activity, "(")]
+	} else {
+		cleanActivity = activity
+	}
+	sortedUserHiscores, err := SortHiscores(userHiscores, cleanActivity, removeUnrankedUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -150,20 +180,17 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 
 // GetUserHiscores takes a list of users and returns a map populated with all of the
 // hiscores for each user
-func GetUserHiscores(allUsers []model.Users, forceNormalizedLeaderboard bool) (map[model.Users]types.Hiscores, error) {
+func GetUserHiscores(allUsers []model.Users, leaderboardOverride string) (map[model.Users]types.Hiscores, error) {
 	var userHiscores map[model.Users]types.Hiscores = make(map[model.Users]types.Hiscores)
 
 	// Loading Hiscores for all users in the server
 	for _, user := range allUsers {
-		var accountType string
-		if forceNormalizedLeaderboard {
-			accountType = "main"
-		} else {
-			accountType = user.OsrsAccountType
+		if leaderboardOverride != "" {
+			user.OsrsAccountType = leaderboardOverride
 		}
 
-		log.Printf("Getting rank for user %s on %s leaderboards\n", user.OsrsUsername, accountType)
-		userHS, err := GetPlayerHiscores(user.OsrsUsernameKey, accountType)
+		log.Printf("Getting rank for user %s on %s leaderboards\n", user.OsrsUsername, user.OsrsAccountType)
+		userHS, err := GetPlayerHiscores(user)
 
 		// If a user changes their RSN we don't want to break the entire process.
 		// We'll just exclude them from the results.

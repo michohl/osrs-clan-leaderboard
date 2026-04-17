@@ -22,6 +22,9 @@ var HiscoreModes = map[string]string{
 	"ironman":          "hiscore_oldschool_ironman",
 	"main":             "hiscore_oldschool",
 
+	// Special game modes like leagues or deadman mode
+	"seasonal": "hiscore_oldschool_seasonal",
+
 	// These modes don't have their own leaderboard from the API so we just have to use the main
 	// "unranked_group_ironman": "hiscore_oldschool",
 	// "group_ironman":          "hiscore_oldschool",

@@ -59,6 +59,10 @@ var HiscoreCommandInfo = discordgo.ApplicationCommand{
 					Name:  "Hardcore Ironman",
 					Value: "hardcore_ironman",
 				},
+				{
+					Name:  "Seasonal (Leagues/DMM)",
+					Value: "seasonal",
+				},
 			},
 		},
 	},
@@ -154,7 +158,7 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		osrsUser.OsrsAccountType = accountType
 	}
 
-	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser}, false)
+	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser}, accountType)
 	if err != nil {
 		log.Println(err)
 
