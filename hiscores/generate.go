@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/michohl/osrs-clan-leaderboard/types"
@@ -183,21 +184,34 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 func GetUserHiscores(allUsers []model.Users, leaderboardOverride string) (map[model.Users]types.Hiscores, error) {
 	var userHiscores map[model.Users]types.Hiscores = make(map[model.Users]types.Hiscores)
 
+	var wg sync.WaitGroup
+	lock := sync.Mutex{}
+
 	// Loading Hiscores for all users in the server
 	for _, user := range allUsers {
-		if leaderboardOverride != "" {
-			user.OsrsAccountType = leaderboardOverride
-		}
+		wg.Add(1)
+		go func(user model.Users) {
+			defer wg.Done()
 
-		log.Printf("Getting rank for user %s on %s leaderboards\n", user.OsrsUsername, user.OsrsAccountType)
-		userHS, err := GetPlayerHiscores(user)
+			if leaderboardOverride != "" {
+				user.OsrsAccountType = leaderboardOverride
+			}
 
-		// If a user changes their RSN we don't want to break the entire process.
-		// We'll just exclude them from the results.
-		if err == nil {
-			userHiscores[user] = userHS
-		}
+			log.Printf("Getting rank for user %s on %s leaderboards\n", user.OsrsUsername, user.OsrsAccountType)
+			userHS, err := GetPlayerHiscores(user)
+
+			// If a user changes their RSN we don't want to break the entire process.
+			// We'll just exclude them from the results.
+			if err == nil {
+				lock.Lock()
+				userHiscores[user] = userHS
+				lock.Unlock()
+			}
+		}(user)
 	}
+
+	wg.Wait()
+
 	return userHiscores, nil
 }
 
