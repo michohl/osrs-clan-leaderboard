@@ -312,7 +312,12 @@ func SortHiscores(hiscores map[model.Users]types.Hiscores, activity string, remo
 		case "activity":
 			return sortedHiscores.Rankings[i].Score > sortedHiscores.Rankings[j].Score
 		case "skill":
-			return sortedHiscores.Rankings[i].Level > sortedHiscores.Rankings[j].Level
+			// If multiple users have the same level then sort next based on their XP
+			if sortedHiscores.Rankings[i].Level == sortedHiscores.Rankings[j].Level {
+				return sortedHiscores.Rankings[i].XP > sortedHiscores.Rankings[j].XP
+			} else {
+				return sortedHiscores.Rankings[i].Level > sortedHiscores.Rankings[j].Level
+			}
 		// This switch covers all actual possible values including a default
 		// case is necessary to make the compiler happy
 		default:
