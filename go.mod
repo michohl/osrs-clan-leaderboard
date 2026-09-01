@@ -1,8 +1,9 @@
 module github.com/michohl/osrs-clan-leaderboard
 
-go 1.24.7
+go 1.26
 
 require (
+	github.com/avast/retry-go/v5 v5.0.0
 	github.com/bwmarrin/discordgo v0.29.1-0.20251108150229-18d25918def0
 	github.com/go-jet/jet/v2 v2.14.0
 	github.com/mattn/go-sqlite3 v1.14.32
@@ -10,7 +11,6 @@ require (
 )
 
 require (
-	github.com/avast/retry-go/v5 v5.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
