@@ -23,6 +23,7 @@
           ];
 
           shellHook = ''
+            source .env
             echo "Go $(go version) — ready for use"
           '';
         };
