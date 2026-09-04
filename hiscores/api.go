@@ -74,7 +74,6 @@ func queryAPI(user model.Users) (types.Hiscores, error) {
 
 	err = json.Unmarshal(body, &userHiscores)
 	if err != nil {
-		log.Printf("Unable to unmarshal body as JSON: %s\n", err)
 		return types.Hiscores{}, fmt.Errorf("No valid hiscores returned for user %s on %s leaderboard", user.OsrsUsername, user.OsrsAccountType)
 	}
 
@@ -86,7 +85,7 @@ func queryAPI(user model.Users) (types.Hiscores, error) {
 // API endpoint that returns the hiscores for one specific user.
 // Documentation: https://runescape.wiki/w/Application_programming_interface#Old_School_Hiscores
 func GetPlayerHiscores(user model.Users) (types.Hiscores, error) {
-	hiscores, err := retry.NewWithData[types.Hiscores](retry.Attempts(5), retry.Delay(100*time.Millisecond)).Do(
+	hiscores, err := retry.NewWithData[types.Hiscores](retry.Attempts(5), retry.Delay(20*time.Millisecond)).Do(
 		func() (types.Hiscores, error) {
 			hiscores, err := queryAPI(user)
 			if err != nil {
@@ -135,26 +134,55 @@ func GetAllActivities() ([]string, error) {
 	return discoveredActivities, nil
 }
 
-// GuessUserAccountType takes a RSN and checks all the available
+// DiscoverRSAccountType takes a RSN and checks all the available
 // leaderboards to see if we can determine what kind of account
-// the user actually is. Default to main if nothing more suitable found
-func GuessUserAccountType(username string) string {
-	encodedUsername := EncodeRSN(username)
+// the user actually is. This is whichever has the highest total level
+func DiscoverRSAccountType(username string) string {
+	var highestTotalLevel = 0
+	var highestTotalLevelAccountType = ""
 
-	accountTypes := sortAccountTypes()
+	// Leverage GetUserHiscores paralllelism to query all the different leaderboards at the same time
+	// for a single user so we can more quickly get all the total levels for comparison
+	allLeaderboards := []model.Users{}
 
-	for _, accountType := range accountTypes {
-		mode := HiscoreModes[accountType]
-		resp, _ := http.Get(
-			fmt.Sprintf("https://secure.runescape.com/m=%s/index_lite.json?player=%s", mode, encodedUsername),
+	for leaderboard := range HiscoreModes {
+		allLeaderboards = append(
+			allLeaderboards,
+			model.Users{
+				OsrsUsername:    username,
+				OsrsUsernameKey: EncodeRSN(username),
+				OsrsAccountType: leaderboard,
+			},
 		)
+	}
 
-		if resp.StatusCode != 404 {
-			return accountType
+	allHiscores, err := GetUserHiscores(allLeaderboards, "")
+	if err != nil {
+		log.Printf("Unable to get hiscores for all leaderboards for user %s. err: %s\n", username, err)
+		return ""
+	}
+
+	for _, accountType := range sortAccountTypes() {
+		for user := range allHiscores {
+			if user.OsrsAccountType != accountType {
+				continue
+			}
+
+			hs := allHiscores[user]
+			totalLevel := hs.GetSkill("Overall").Level
+
+			if totalLevel > highestTotalLevel {
+				highestTotalLevel = totalLevel
+				highestTotalLevelAccountType = user.OsrsAccountType
+			}
+
+			break
 		}
 	}
 
-	return "main"
+	log.Printf("User %s has highest total level on %s mode\n", username, highestTotalLevelAccountType)
+
+	return highestTotalLevelAccountType
 }
 
 // sortAccountTypes takes the HiscoreModes and sorts the keys
@@ -166,7 +194,7 @@ func sortAccountTypes() []string {
 	accountTypes := []string{}
 
 	for accountType := range HiscoreModes {
-		if !slices.Contains(lowPriorityAccountTypes, accountType) {
+		if !slices.Contains(lowPriorityAccountTypes, accountType) && accountType != "seasonal" {
 			accountTypes = append(accountTypes, accountType)
 		}
 	}

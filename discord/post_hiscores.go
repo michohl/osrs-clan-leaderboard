@@ -42,6 +42,8 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		return err
 	}
 
+	allUsers = utils.RefreshAccountTypes(allUsers)
+
 	allActivitiesAndSkills, err := storage.FetchAllActivitiesAndSkills(server.ID)
 	if err != nil {
 		return err

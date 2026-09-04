@@ -10,6 +10,7 @@ import (
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
 	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
+	"github.com/michohl/osrs-clan-leaderboard/utils"
 )
 
 // HiscoreCommandInfo is the information we'll use to
@@ -134,11 +135,6 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		accountType = data[2].StringValue()
 	}
 
-	if accountType == "" {
-		log.Println("No account type provided. Making a guess")
-		accountType = hiscores.GuessUserAccountType(osrsUsername)
-	}
-
 	discoveredErrors := ""
 
 	osrsUser, err := storage.FetchUser(i.GuildID, hiscores.EncodeRSN(osrsUsername))
@@ -156,9 +152,14 @@ func hiscoreCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	if overrideLeaderboard {
 		osrsUser.OsrsAccountType = accountType
+	} else if osrsUser.OsrsAccountType == "" {
+		log.Println("No account type provided. Discovering account type")
+		osrsUser.OsrsAccountType = hiscores.DiscoverRSAccountType(osrsUsername)
+	} else {
+		osrsUser = utils.RefreshAccountTypes([]model.Users{osrsUser})[0]
 	}
 
-	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser}, accountType)
+	userHiscores, err := hiscores.GetUserHiscores([]model.Users{osrsUser}, "")
 	if err != nil {
 		log.Println(err)
 
