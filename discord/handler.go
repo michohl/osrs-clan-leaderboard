@@ -15,6 +15,7 @@ var commands = []*discordgo.ApplicationCommand{
 	&UnassignCommandInfo,
 	&PostHiscoresCommandInfo,
 	&HiscoreCommandInfo,
+	&SkillsCommandInfo,
 }
 
 // CommandHandler is the contract any function we want to use as a handler must satisfy
@@ -28,11 +29,13 @@ var commandHandlers = map[string]CommandHandler{
 	"unassign":  UnassignHandler,
 	"post":      PostHiscoresHandler,
 	"hiscore":   HiscoreHandler,
+	"skills":    SkillsHandler,
 }
 
 var autocompleteHandlers = map[string]CommandHandler{
 	"hiscore":  HiscoreAutocompleteHandler,
 	"unassign": HiscoreAutocompleteHandler,
+	"skills":   SkillsAutocompleteHandler,
 }
 
 // GetCommandHandler takes the user specified command and returns
