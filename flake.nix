@@ -20,6 +20,7 @@
             delve         # Debugger (dlv)
             golangci-lint # Linter
             sqlite        # SQL Client
+            go-jet        # CLI tool to generate jet_schemas
           ];
 
           shellHook = ''
