@@ -11,6 +11,7 @@ package table
 // this method only once at the beginning of the program.
 func UseSchema(schema string) {
 	Messages = Messages.FromSchema(schema)
+	SeenHiscores = SeenHiscores.FromSchema(schema)
 	Servers = Servers.FromSchema(schema)
 	Users = Users.FromSchema(schema)
 }

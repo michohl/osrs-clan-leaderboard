@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/michohl/osrs-clan-leaderboard/storage"
 	"github.com/michohl/osrs-clan-leaderboard/types"
 
 	"github.com/michohl/osrs-clan-leaderboard/jet_schemas/model"
@@ -148,6 +149,18 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 			userField.Value += fmt.Sprintf(" <@%s>", rankedUser.User.DiscordUserID)
 		}
 
+		delta := int64(0)
+
+		previous_hiscore, err := storage.FetchPreviousHiscore(
+			rankedUser.User.ServerID,
+			rankedUser.User.OsrsUsernameKey,
+			activity,
+		)
+
+		if err != nil {
+			previous_hiscore = model.SeenHiscores{Rank: 0, Level: 0, Xp: 0}
+		}
+
 		switch activityKind {
 		case "skill":
 			quantifierField.Value = fmt.Sprintf(
@@ -155,12 +168,18 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 				quantifierField.Value,
 				rankedUser.Level,
 			)
+			if previous_hiscore.Level > 0 {
+				delta = int64(rankedUser.Level) - previous_hiscore.Level
+			}
 		case "activity":
 			quantifierField.Value = fmt.Sprintf(
 				"%s\n%d",
 				quantifierField.Value,
 				rankedUser.Score,
 			)
+			if previous_hiscore.Score > 0 {
+				delta = int64(rankedUser.Score) - previous_hiscore.Score
+			}
 		}
 
 		rankField.Value = fmt.Sprintf(
@@ -168,6 +187,11 @@ func FormatEmbeds(activity string, userHiscores map[model.Users]types.Hiscores, 
 			rankField.Value,
 			rankedUser.Rank,
 		)
+
+		// If we get here then we have a previous hiscore and should note the delta
+		if delta > 0 {
+			quantifierField.Value = fmt.Sprintf("%s **(+%d)**", quantifierField.Value, delta)
+		}
 	}
 
 	if removeRank {

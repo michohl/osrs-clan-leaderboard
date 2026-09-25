@@ -79,7 +79,7 @@ func EnrollMessage(server model.Servers, message model.Messages) error {
 				table.Messages.MessageID.SET(sqlite.String(message.MessageID)),
 				table.Messages.ServerID.SET(sqlite.String(server.ID)),
 				table.Messages.Activity.SET(sqlite.String(message.Activity)),
-				table.Messages.Position.SET(sqlite.Int32(message.Position)),
+				table.Messages.Position.SET(sqlite.Int64(message.Position)),
 			),
 		)
 

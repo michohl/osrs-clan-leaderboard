@@ -32,7 +32,7 @@ func FetchAllActivitiesAndSkills(serverID string) ([]string, error) {
 }
 
 // FetchActivityPosition takes a Guild ID and returns all the unique
-func FetchActivityPosition(serverID string, activity string) (int32, error) {
+func FetchActivityPosition(serverID string, activity string) (int64, error) {
 	db, err := sql.Open("sqlite3", DBFilePath)
 	if err != nil {
 		return -1, err
@@ -47,7 +47,7 @@ func FetchActivityPosition(serverID string, activity string) (int32, error) {
 			AND(table.Messages.Activity.EQ(sqlite.String(activity))),
 		)
 
-	var m []int32
+	var m []int64
 	err = sqlStmt.Query(db, &m)
 	if err != nil {
 		return -1, err

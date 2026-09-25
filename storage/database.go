@@ -46,6 +46,16 @@ func init() {
 		position          INTEGER NOT NULL DEFAULT 0,
 		PRIMARY KEY (message_id, server_id, activity)
 	);
+	CREATE TABLE IF NOT EXISTS seen_hiscores (
+		osrs_username_key TEXT    NOT NULL DEFAULT "",
+		server_id         TEXT    NOT NULL DEFAULT "",
+		activity          TEXT    NOT NULL DEFAULT "",
+		rank              INTEGER NOT NULL DEFAULT 0,
+		xp                INTEGER NOT NULL DEFAULT 0,
+		level             INTEGER NOT NULL DEFAULT 0,
+		score             INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (osrs_username_key, server_id, activity)
+    );
     `
 	_, err = db.Exec(sqlStmt)
 	if err != nil {

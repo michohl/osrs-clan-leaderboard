@@ -63,12 +63,12 @@ func EnrollServer(server model.Servers, activities string) error {
 		currentPosition, err := FetchActivityPosition(server.ID, activity)
 
 		// If we can't find a message or if the position changed create/update the message row
-		if err != nil || currentPosition == -1 || int32(position) != currentPosition {
+		if err != nil || currentPosition == -1 || int64(position) != currentPosition {
 			err = EnrollMessage(server, model.Messages{
 				MessageID: "",
 				ServerID:  server.ID,
 				Activity:  activity,
-				Position:  int32(position),
+				Position:  int64(position),
 			})
 			if err != nil {
 				return err

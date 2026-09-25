@@ -11,5 +11,5 @@ type Messages struct {
 	MessageID string `sql:"primary_key"`
 	ServerID  string `sql:"primary_key"`
 	Activity  string `sql:"primary_key"`
-	Position  int32
+	Position  int64
 }

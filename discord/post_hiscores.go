@@ -183,6 +183,14 @@ func PostHiscoresMessages(serverID string, s *discordgo.Session) error {
 		}
 	}
 
+	// Now that we showed the scheduled message and displayed the level/score delta from the previous invocation
+	// we need to note down what the current hiscores are to make the next invocations delta relative
+	err = storage.EnrollManyHiscores(server, userHiscores)
+	if err != nil {
+		// TBD if this should really be fatal or not. We could still post hiscores without showing the delta
+		return err
+	}
+
 	return nil
 }
 
