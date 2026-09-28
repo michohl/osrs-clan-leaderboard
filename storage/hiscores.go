@@ -28,6 +28,8 @@ func EnrollHiscores(server model.Servers, hiscores model.SeenHiscores) error {
 			sqlite.SET(
 				table.SeenHiscores.Rank.SET(sqlite.Int64(hiscores.Rank)),
 				table.SeenHiscores.Xp.SET(sqlite.Int64(hiscores.Xp)),
+				table.SeenHiscores.Score.SET(sqlite.Int64(hiscores.Score)),
+				table.SeenHiscores.Level.SET(sqlite.Int64(hiscores.Level)),
 			),
 		)
 
